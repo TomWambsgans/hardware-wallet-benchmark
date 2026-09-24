@@ -4561,6 +4561,7 @@ sha256_compress_asm2:
     pop {r4-r11, pc}
     .size sha256_compress_asm2, . - sha256_compress_asm2
 
+    .global sha256_k3
     .p2align 2
 sha256_k3:
     .word 0x428a2f98
@@ -4628,13 +4629,14 @@ sha256_k3:
     .word 0xbef9a3f7
     .word 0xc67178f2
     .word 0
-    .global sha256_compress_asm3
-    .type sha256_compress_asm3, %function
+    .global sha256_compress_asm3_tab
+    .type sha256_compress_asm3_tab, %function
     .thumb_func
-sha256_compress_asm3:
+sha256_compress_asm3_tab:
     push {r4-r11, lr}
     sub sp, sp, #268
     str r0, [sp, #256]
+    str r2, [sp, #260]
     ldmia r1!, {r4-r11}
     stmia sp, {r4-r11}
     ldmia r1, {r4-r11}
@@ -4682,7 +4684,7 @@ sha256_compress_asm3:
     bne 2b
     ldr r0, [sp, #256]
     ldm r0, {r4-r11}
-    adr r12, sha256_k3
+    ldr r12, [sp, #260]
     mov r3, sp
     eor lr, r5, r6
 3:
@@ -4905,4 +4907,4 @@ sha256_compress_asm3:
     stm r12, {r0-r3}
     add sp, sp, #268
     pop {r4-r11, pc}
-    .size sha256_compress_asm3, . - sha256_compress_asm3
+    .size sha256_compress_asm3_tab, . - sha256_compress_asm3_tab

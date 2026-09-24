@@ -15,6 +15,7 @@ probe_0:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -24,6 +25,9 @@ probe_0:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_0, . - probe_0
     @ probe 1: ldr16
     .global probe_1
@@ -37,6 +41,7 @@ probe_1:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -46,6 +51,9 @@ probe_1:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_1, . - probe_1
     @ probe 2: eor_ror_shifted
     .global probe_2
@@ -59,6 +67,7 @@ probe_2:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -68,6 +77,9 @@ probe_2:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_2, . - probe_2
     @ probe 3: eor32
     .global probe_3
@@ -81,6 +93,7 @@ probe_3:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -90,6 +103,9 @@ probe_3:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_3, . - probe_3
     @ probe 4: ror32_dep
     .global probe_4
@@ -103,6 +119,7 @@ probe_4:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -112,6 +129,9 @@ probe_4:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_4, . - probe_4
     @ probe 5: rors16_dep
     .global probe_5
@@ -125,6 +145,7 @@ probe_5:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -134,6 +155,9 @@ probe_5:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_5, . - probe_5
     @ probe 6: adds16_pairs
     .global probe_6
@@ -147,6 +171,7 @@ probe_6:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -157,6 +182,9 @@ probe_6:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_6, . - probe_6
     @ probe 7: eor_shifted_dep
     .global probe_7
@@ -170,6 +198,7 @@ probe_7:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -179,6 +208,9 @@ probe_7:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_7, . - probe_7
     @ probe 8: ldr_use
     .global probe_8
@@ -192,6 +224,7 @@ probe_8:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -202,6 +235,9 @@ probe_8:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_8, . - probe_8
     @ probe 9: eor32_adds16
     .global probe_9
@@ -215,6 +251,7 @@ probe_9:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -225,6 +262,9 @@ probe_9:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_9, . - probe_9
     @ probe 10: ror32_adds16
     .global probe_10
@@ -238,6 +278,7 @@ probe_10:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -248,6 +289,9 @@ probe_10:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_10, . - probe_10
     @ probe 11: ldr16_adds16
     .global probe_11
@@ -261,6 +305,7 @@ probe_11:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -271,6 +316,9 @@ probe_11:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_11, . - probe_11
     @ probe 12: add16_high
     .global probe_12
@@ -284,6 +332,7 @@ probe_12:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -293,6 +342,9 @@ probe_12:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_12, . - probe_12
     @ probe 13: eor32_pairs
     .global probe_13
@@ -306,6 +358,7 @@ probe_13:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -316,6 +369,9 @@ probe_13:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_13, . - probe_13
     @ probe 14: ror32_indep
     .global probe_14
@@ -329,6 +385,7 @@ probe_14:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -338,6 +395,9 @@ probe_14:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_14, . - probe_14
     @ probe 15: eor32_ror32_dep
     .global probe_15
@@ -351,6 +411,7 @@ probe_15:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -361,6 +422,9 @@ probe_15:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_15, . - probe_15
     @ probe 16: ldr32
     .global probe_16
@@ -374,6 +438,7 @@ probe_16:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -383,6 +448,9 @@ probe_16:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_16, . - probe_16
     @ probe 17: ldr32_postinc
     .global probe_17
@@ -396,6 +464,7 @@ probe_17:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -406,6 +475,9 @@ probe_17:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_17, . - probe_17
     @ probe 18: str16
     .global probe_18
@@ -419,6 +491,7 @@ probe_18:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -428,6 +501,9 @@ probe_18:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_18, . - probe_18
     @ probe 19: ldrd
     .global probe_19
@@ -441,6 +517,7 @@ probe_19:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -450,6 +527,9 @@ probe_19:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_19, . - probe_19
     @ probe 20: add_ror_shifted
     .global probe_20
@@ -463,6 +543,7 @@ probe_20:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -472,6 +553,9 @@ probe_20:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_20, . - probe_20
     @ probe 21: eor32_misaligned
     .global probe_21
@@ -485,6 +569,7 @@ probe_21:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
     nop
@@ -495,6 +580,9 @@ probe_21:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_21, . - probe_21
     @ probe 22: mixed4
     .global probe_22
@@ -508,6 +596,7 @@ probe_22:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -520,6 +609,9 @@ probe_22:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_22, . - probe_22
     @ probe 23: adds16_1536B
     .global probe_23
@@ -533,6 +625,7 @@ probe_23:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -542,6 +635,9 @@ probe_23:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_23, . - probe_23
     @ probe 24: adds16_2048B
     .global probe_24
@@ -555,6 +651,7 @@ probe_24:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -564,6 +661,9 @@ probe_24:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_24, . - probe_24
     @ probe 25: adds16_2560B
     .global probe_25
@@ -577,6 +677,7 @@ probe_25:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -586,6 +687,9 @@ probe_25:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_25, . - probe_25
     @ probe 26: adds16_3072B
     .global probe_26
@@ -599,6 +703,7 @@ probe_26:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -608,6 +713,9 @@ probe_26:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_26, . - probe_26
     @ probe 27: eor32_1536B
     .global probe_27
@@ -621,6 +729,7 @@ probe_27:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -630,6 +739,9 @@ probe_27:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_27, . - probe_27
     @ probe 28: eor32_2048B
     .global probe_28
@@ -643,6 +755,7 @@ probe_28:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -652,8 +765,11 @@ probe_28:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_28, . - probe_28
-    @ probe 29: adds16_big
+    @ probe 29: ldr_flash
     .global probe_29
     .type probe_29, %function
     .p2align 3
@@ -665,17 +781,21 @@ probe_29:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
-    .rept 2048
-    adds r2, r2, r3
+    .rept 256
+    ldr r2, [r6]
     .endr
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_29, . - probe_29
-    @ probe 30: eor32_big
+    @ probe 30: ldr_flash_postinc
     .global probe_30
     .type probe_30, %function
     .p2align 3
@@ -687,17 +807,21 @@ probe_30:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
-    .rept 2048
-    eor.w r2, r2, r3
+    .rept 256
+    ldr r2, [r6], #0
     .endr
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
     .size probe_30, . - probe_30
-    @ probe 31: eor32_ror32_big
+    @ probe 31: ldrb_flash
     .global probe_31
     .type probe_31, %function
     .p2align 3
@@ -709,6 +833,85 @@ probe_31:
     movs r3, #3
     movs r4, #5
     movs r5, #7
+    adr r6, 9f
+    b 2f
+    .p2align 3
+2:
+    .rept 256
+    ldrb r2, [r6, #1]
+    .endr
+    subs r0, r0, #1
+    bne 2b
+    pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
+    .size probe_31, . - probe_31
+    @ probe 32: adds16_big
+    .global probe_32
+    .type probe_32, %function
+    .p2align 3
+    .thumb_func
+probe_32:
+    push {r4-r11, lr}
+    mov r12, r1
+    movs r2, #1
+    movs r3, #3
+    movs r4, #5
+    movs r5, #7
+    adr r6, 9f
+    b 2f
+    .p2align 3
+2:
+    .rept 2048
+    adds r2, r2, r3
+    .endr
+    subs r0, r0, #1
+    bne 2b
+    pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
+    .size probe_32, . - probe_32
+    @ probe 33: eor32_big
+    .global probe_33
+    .type probe_33, %function
+    .p2align 3
+    .thumb_func
+probe_33:
+    push {r4-r11, lr}
+    mov r12, r1
+    movs r2, #1
+    movs r3, #3
+    movs r4, #5
+    movs r5, #7
+    adr r6, 9f
+    b 2f
+    .p2align 3
+2:
+    .rept 2048
+    eor.w r2, r2, r3
+    .endr
+    subs r0, r0, #1
+    bne 2b
+    pop {r4-r11, pc}
+    .p2align 2
+9:
+    .word 0x12345678
+    .size probe_33, . - probe_33
+    @ probe 34: eor32_ror32_big
+    .global probe_34
+    .type probe_34, %function
+    .p2align 3
+    .thumb_func
+probe_34:
+    push {r4-r11, lr}
+    mov r12, r1
+    movs r2, #1
+    movs r3, #3
+    movs r4, #5
+    movs r5, #7
+    adr r6, 9f
     b 2f
     .p2align 3
 2:
@@ -719,4 +922,7 @@ probe_31:
     subs r0, r0, #1
     bne 2b
     pop {r4-r11, pc}
-    .size probe_31, . - probe_31
+    .p2align 2
+9:
+    .word 0x12345678
+    .size probe_34, . - probe_34

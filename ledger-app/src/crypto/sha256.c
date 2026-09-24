@@ -1,4 +1,24 @@
+#include <string.h>
+
 #include "sha256.h"
+
+#if defined(__thumb2__)
+void                  sha256_compress_asm3_tab(uint32_t h[8], const uint32_t m[16], const uint32_t *k);
+extern const uint32_t sha256_k3[65];
+static uint32_t       g_k_ram[65];
+
+void sha256_tables_init(void) {
+    memcpy(g_k_ram, sha256_k3, sizeof(g_k_ram));
+}
+
+void sha256_compress_asm3(uint32_t h[8], const uint32_t m[16]) {
+    sha256_compress_asm3_tab(h, m, sha256_k3);
+}
+
+void sha256_compress_asm3r(uint32_t h[8], const uint32_t m[16]) {
+    sha256_compress_asm3_tab(h, m, g_k_ram);
+}
+#endif
 
 static const uint32_t K[64] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,

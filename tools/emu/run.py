@@ -52,6 +52,8 @@ class Emu:
         uc = self.uc
         for reg, val in zip((UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3), args):
             uc.reg_write(reg, val & M32)
+        if len(args) > 4:  # AAPCS: further arguments on the stack
+            uc.mem_write(STACK_TOP, struct.pack(f"<{len(args) - 4}I", *[a & M32 for a in args[4:]]))
         uc.reg_write(UC_ARM_REG_SP, STACK_TOP)
         uc.reg_write(UC_ARM_REG_R9, self.sym["_sb"])  # -frwpi static base
         uc.reg_write(UC_ARM_REG_LR, RET | 1)
@@ -69,8 +71,9 @@ class Emu:
 def main():
     check_references()
     emu = Emu()
+    emu.call("crypto_tables_init")
     counts = {}
-    for name in ("b2s_compress_c", "b2s_compress_asm", "b2s_compress_asm2", "b2s_compress_asm3"):
+    for name in ("b2s_compress_c", "b2s_compress_asm", "b2s_compress_asm2", "b2s_compress_asm3", "b2s_compress_asm3r"):
         for _ in range(200):
             h = list(struct.unpack("<8I", os.urandom(32)))
             m = list(struct.unpack("<16I", os.urandom(64)))
@@ -79,7 +82,8 @@ def main():
             emu.put(BUF_M, m)
             counts[name] = emu.call(name, BUF_H, BUF_M, t, f)
             assert emu.words(BUF_H, 8) == b2s_compress_ref(h, m, t, f), f"{name}: wrong output"
-    for name in ("sha256_compress_c", "sha256_compress_asm", "sha256_compress_asm2", "sha256_compress_asm3"):
+    for name in ("sha256_compress_c", "sha256_compress_asm", "sha256_compress_asm2", "sha256_compress_asm3",
+                 "sha256_compress_asm3r"):
         for _ in range(200):
             h = list(struct.unpack("<8I", os.urandom(32)))
             m = list(struct.unpack("<16I", os.urandom(64)))

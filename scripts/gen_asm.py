@@ -458,12 +458,14 @@ def gen_blake2s_v3() -> str:
     The table has an 11th sentinel row (0x80): the next-round preload of the last
     round reads it, and its bit 7 ends the loop (flags survive: no flag-setting
     instruction follows the test)."""
-    out = [HEADER, "    .p2align 2", "b2s_sigma_ofs:"]
+    out = [HEADER, "    .global b2s_sigma_ofs", "    .p2align 2", "b2s_sigma_ofs:"]
     for r in range(10):
         out.append("    .byte " + ", ".join(str(4 * x) for x in SIGMA[r]))
     out.append("    .byte " + ", ".join(["0x80"] * 16))
-    out += ["    .global b2s_compress_asm3", "    .type b2s_compress_asm3, %function", "    .thumb_func",
-            "b2s_compress_asm3:"]
+    # void b2s_compress_asm3_tab(h, m, t, f, const uint8_t table[176]): table is
+    # b2s_sigma_ofs itself or a RAM copy of it (flash data reads may be slower).
+    out += ["    .global b2s_compress_asm3_tab", "    .type b2s_compress_asm3_tab, %function", "    .thumb_func",
+            "b2s_compress_asm3_tab:"]
     e = out.append
     e("    push {r4-r11, lr}")
     e(f"    sub sp, sp, #{FRAME}")
@@ -483,8 +485,8 @@ def gen_blake2s_v3() -> str:
         out.extend(mov32("r12", B2S_IV[i]))
         e(f"    str r12, [sp, #{C_OFF + 4 * i}]")
     e("    ldm r0, {r0-r7}")
-    # Row pointer, first message word of round 0, c0 into the slot.
-    e("    adr lr, b2s_sigma_ofs")
+    # Row pointer (5th argument, above the saved registers), first message word of round 0, c0 into the slot.
+    e(f"    ldr lr, [sp, #{FRAME + 36}]")
     e(f"    str lr, [sp, #{SIGP_OFF}]")
     e("    ldrb lr, [lr, #0]")
     e(f"    ldr r12, [sp, #{C_OFF}]")
@@ -554,7 +556,7 @@ def gen_blake2s_v3() -> str:
         e(f"    str r12, [lr, #{16 + 4 * i}]")
     e(f"    add sp, sp, #{FRAME}")
     e("    pop {r4-r11, pc}")
-    e("    .size b2s_compress_asm3, . - b2s_compress_asm3")
+    e("    .size b2s_compress_asm3_tab, . - b2s_compress_asm3_tab")
     return "\n".join(out) + "\n"
 
 
@@ -562,13 +564,17 @@ def gen_sha256_v3() -> str:
     """Schedule loop (two words per iteration, W[i-2], W[i-1], W[i-16] carried in
     fixed registers) then round loop (8 rounds per iteration with a..h renamed;
     ends when the next K is the 0 sentinel after the table)."""
-    out = [HEADER, "    .p2align 2", "sha256_k3:"] + [f"    .word {k:#010x}" for k in K256] + ["    .word 0"]
-    out += ["    .global sha256_compress_asm3", "    .type sha256_compress_asm3, %function", "    .thumb_func",
-            "sha256_compress_asm3:"]
+    out = [HEADER, "    .global sha256_k3", "    .p2align 2", "sha256_k3:"] + [f"    .word {k:#010x}" for k in K256]
+    out += ["    .word 0"]
+    # void sha256_compress_asm3_tab(h, m, const uint32_t k[65]): k is sha256_k3 (64 K
+    # words and a 0 sentinel) or a RAM copy of it.
+    out += ["    .global sha256_compress_asm3_tab", "    .type sha256_compress_asm3_tab, %function", "    .thumb_func",
+            "sha256_compress_asm3_tab:"]
     e = out.append
     e("    push {r4-r11, lr}")
     e(f"    sub sp, sp, #{SHA_FRAME}")
     e(f"    str r0, [sp, #{SHA_H_OFF}]")
+    e(f"    str r2, [sp, #{SHA_H_OFF + 4}]")
     e("    ldmia r1!, {r4-r11}")
     e("    stmia sp, {r4-r11}")
     e("    ldmia r1, {r4-r11}")
@@ -619,7 +625,7 @@ def gen_sha256_v3() -> str:
     # Rounds: a..h in r4..r11, K via r12, W via r3, Maj's a^b in r2/lr.
     e(f"    ldr r0, [sp, #{SHA_H_OFF}]")
     e("    ldm r0, {r4-r11}")
-    e("    adr r12, sha256_k3")
+    e(f"    ldr r12, [sp, #{SHA_H_OFF + 4}]")
     e("    mov r3, sp")
     e("    eor lr, r5, r6")
     e("3:")
@@ -673,7 +679,7 @@ def gen_sha256_v3() -> str:
     e("    stm r12, {r0-r3}")
     e(f"    add sp, sp, #{SHA_FRAME}")
     e("    pop {r4-r11, pc}")
-    e("    .size sha256_compress_asm3, . - sha256_compress_asm3")
+    e("    .size sha256_compress_asm3_tab, . - sha256_compress_asm3_tab")
     return "\n".join(out) + "\n"
 
 # ---------------------------------------------------------------------------
@@ -683,7 +689,8 @@ def gen_sha256_v3() -> str:
 # "+2" probes start at 2 mod 4 to test the alignment of 32-bit instructions.
 
 PROBES = [
-    # (name, body lines, repetitions, align_plus_2, reset_r12_each_iteration)
+    # (name, body lines, repetitions, align_plus_2, reset_r12_each_iteration); r6 points to a
+    # word in flash (the probe's own literal), r1/r12 to RAM.
     ("adds16_dep",        ["adds r2, r2, r3"], 256, False, False),
     ("ldr16",             ["ldr r2, [r1]"], 256, False, False),
     ("eor_ror_shifted",   ["eor r2, r2, r3, ror #7"], 256, False, False),
@@ -713,6 +720,9 @@ PROBES = [
     ("adds16_3072B",      ["adds r2, r2, r3"], 1536, False, False),
     ("eor32_1536B",       ["eor.w r2, r2, r3"], 384, False, False),
     ("eor32_2048B",       ["eor.w r2, r2, r3"], 512, False, False),
+    ("ldr_flash",         ["ldr r2, [r6]"], 256, False, False),
+    ("ldr_flash_postinc", ["ldr r2, [r6], #0"], 256, False, False),
+    ("ldrb_flash",        ["ldrb r2, [r6, #1]"], 256, False, False),
     ("adds16_big",        ["adds r2, r2, r3"], 2048, False, False),
     ("eor32_big",         ["eor.w r2, r2, r3"], 2048, False, False),
     ("eor32_ror32_big",   ["eor.w r2, r2, r3", "ror r2, r2, #7"], 1024, False, False),
@@ -735,6 +745,7 @@ def gen_probes() -> tuple[str, str]:
         e("    movs r3, #3")
         e("    movs r4, #5")
         e("    movs r5, #7")
+        e("    adr r6, 9f")
         e("    b 2f")
         e("    .p2align 3")
         if plus2:
@@ -748,6 +759,9 @@ def gen_probes() -> tuple[str, str]:
         e("    subs r0, r0, #1")
         e("    bne 2b")
         e("    pop {r4-r11, pc}")
+        e("    .p2align 2")
+        e("9:")
+        e("    .word 0x12345678")
         e(f"    .size probe_{k}, . - probe_{k}")
     c = ["// Generated by scripts/gen_asm.py -- do not edit.", "#include \"probes.h\"", ""]
     c += [f"void probe_{k}(uint32_t iterations, uint32_t *buf);" for k in range(len(PROBES))]

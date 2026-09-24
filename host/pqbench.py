@@ -32,11 +32,12 @@ from ledger_hid import ApduError, Ledger
 CLA = 0xE0
 INS_INFO, INS_KEYGEN, INS_SIGN, INS_GET_SIG, INS_BENCH, INS_NOP, INS_HASH, INS_CONFIG, INS_COMPRESS = range(1, 10)
 # INS_COMPRESS / INS_BENCH functions (FN_* in main.c), and which are BLAKE2s.
-FNS = {0: "blake2s-c", 1: "blake2s-asm", 2: "blake2s-asm2", 3: "blake2s-asm3", 4: "sha256-c", 5: "sha256-asm",
-       6: "sha256-asm2", 7: "sha256-asm3", 8: "sha256-os"}
-B2S_FNS = (0, 1, 2, 3)
+FNS = {0: "blake2s-c", 1: "blake2s-asm", 2: "blake2s-asm2", 3: "blake2s-asm3", 4: "blake2s-asm3r",
+       5: "sha256-c", 6: "sha256-asm", 7: "sha256-asm2", 8: "sha256-asm3", 9: "sha256-asm3r", 10: "sha256-os"}
+B2S_FNS = (0, 1, 2, 3, 4)
+OS_FN = 10
 # CONFIG P2: the BLAKE2s implementation the scheme uses.
-B2S_IMPLS = {0: "c", 1: "asm", 2: "asm2", 3: "asm3"}
+B2S_IMPLS = {0: "c", 1: "asm", 2: "asm2", 3: "asm3", 4: "asm3r"}
 # INS_BENCH modes (P2).
 B_CHAIN, B_COMPRESS, B_LEAF, B_PROBE = range(4)
 PROBES = json.loads((pathlib.Path(__file__).resolve().parent / "probes.json").read_text())
@@ -149,7 +150,7 @@ def probes(app: App, nop: float, target_insns: int = 4_000_000) -> dict:
 
 def compressions(app: App, nop: float, n: int) -> dict:
     """Microseconds per compression, every implementation."""
-    return {name: app.per_call_us(B_COMPRESS, n if fn != 8 else n // 8, nop, fn) for fn, name in FNS.items()}
+    return {name: app.per_call_us(B_COMPRESS, n if fn != OS_FN else n // 8, nop, fn) for fn, name in FNS.items()}
 
 
 def cmd_probes(app: App, args):
@@ -284,7 +285,7 @@ def main():
         s.add_argument("--yield", dest="yield_", action="store_true",
                        help="service the event loop during computations (blocks up to 100 ms per call)")
         s.add_argument("--blake2s", type=int, default=0, choices=list(B2S_IMPLS),
-                       help="BLAKE2s compression the scheme uses: 0 C, 1 asm, 2 asm2, 3 asm3")
+                       help="BLAKE2s compression the scheme uses: 0 C, 1 asm, 2 asm2, 3 asm3 (flash table), 4 asm3r (RAM table)")
         if name == "vector":
             s.add_argument("--keys", type=int, default=1, help="how many of the vector keys to regenerate (1.38M hashes each)")
         if name == "bench":

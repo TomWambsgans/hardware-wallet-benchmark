@@ -38,11 +38,13 @@ enum {
     FN_B2S_ASM     = 1,
     FN_B2S_ASM2    = 2,
     FN_B2S_ASM3    = 3,
-    FN_SHA256_C    = 4,
-    FN_SHA256_ASM  = 5,
-    FN_SHA256_ASM2 = 6,
-    FN_SHA256_ASM3 = 7,
-    FN_SHA256_OS   = 8,
+    FN_B2S_ASM3R   = 4,
+    FN_SHA256_C    = 5,
+    FN_SHA256_ASM  = 6,
+    FN_SHA256_ASM2 = 7,
+    FN_SHA256_ASM3 = 8,
+    FN_SHA256_ASM3R = 9,
+    FN_SHA256_OS   = 10,
     FN_COUNT
 };
 
@@ -60,6 +62,9 @@ static void compress_fn(unsigned fn, uint32_t h[8], const uint32_t m[16], uint32
         case FN_B2S_ASM3:
             b2s_compress_asm3(h, m, t, f);
             break;
+        case FN_B2S_ASM3R:
+            b2s_compress_asm3r(h, m, t, f);
+            break;
         case FN_SHA256_C:
             sha256_compress_c(h, m);
             break;
@@ -71,6 +76,9 @@ static void compress_fn(unsigned fn, uint32_t h[8], const uint32_t m[16], uint32
             break;
         case FN_SHA256_ASM3:
             sha256_compress_asm3(h, m);
+            break;
+        case FN_SHA256_ASM3R:
+            sha256_compress_asm3r(h, m);
             break;
         default:
             sha256_compress_os(h, m);
@@ -175,7 +183,7 @@ static void handle(const command_t *cmd) {
             // P1: FN_*. Data: h (8 LE words) || m (16 LE words) [|| t || f, LE, BLAKE2s].
             // Returns h after one compression, to check each function on the device.
             uint32_t h[8], m[16], tf[2] = {0, 0};
-            bool     b2s = cmd->p1 <= FN_B2S_ASM3;
+            bool     b2s = cmd->p1 <= FN_B2S_ASM3R;
             if (cmd->p1 >= FN_COUNT) {
                 io_send_sw(SW_WRONG_P1P2);
                 return;
@@ -322,6 +330,7 @@ void app_main(void) {
     // RAM starts zeroed and initialized globals are not allowed (no .data).
     G_yield = 0;
     g_b2s_impl = B2S_C;
+    crypto_tables_init();
     if (N_stored_key.valid == 1) {
         memcpy(&G_key, (const void *) &N_stored_key.key, sizeof(G_key));
         G_have_key = true;

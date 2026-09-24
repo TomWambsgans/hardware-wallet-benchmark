@@ -26,6 +26,27 @@ static const uint8_t SIGMA[10][16] = {
     {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
 };
 
+#if defined(__thumb2__)
+void b2s_compress_asm3_tab(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f, const uint8_t *table);
+extern const uint8_t b2s_sigma_ofs[176];
+static uint32_t      g_sigma_ram[44];  // RAM copy of b2s_sigma_ofs (crypto_tables_init)
+
+void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+    b2s_compress_asm3_tab(h, m, t, f, b2s_sigma_ofs);
+}
+
+void b2s_compress_asm3r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+    b2s_compress_asm3_tab(h, m, t, f, (const uint8_t *) g_sigma_ram);
+}
+
+void sha256_tables_init(void);
+
+void crypto_tables_init(void) {
+    memcpy(g_sigma_ram, b2s_sigma_ofs, sizeof(g_sigma_ram));
+    sha256_tables_init();
+}
+#endif
+
 static inline uint32_t rotr32(uint32_t x, unsigned n) {
     return (x >> n) | (x << (32 - n));
 }
@@ -81,6 +102,10 @@ void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
     }
     if (g_b2s_impl == B2S_ASM3) {
         b2s_compress_asm3(h, m, t, f);
+        return;
+    }
+    if (g_b2s_impl == B2S_ASM3R) {
+        b2s_compress_asm3r(h, m, t, f);
         return;
     }
 #endif

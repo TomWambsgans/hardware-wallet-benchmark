@@ -19,9 +19,13 @@ void b2s_compress_c(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f)
 #if defined(__thumb2__)
 void b2s_compress_asm(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);   // blake2s_thumb2.S
 void b2s_compress_asm2(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);  // blake2s_thumb2.S
-void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);  // blake2s_thumb2.S
+// v3 reads a 176-byte message-offset table: b2s_compress_asm3 from flash,
+// b2s_compress_asm3r from a RAM copy made by crypto_tables_init().
+void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+void b2s_compress_asm3r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+void crypto_tables_init(void);
 #endif
-enum { B2S_C = 0, B2S_ASM = 1, B2S_ASM2 = 2, B2S_ASM3 = 3, B2S_IMPLS };
+enum { B2S_C = 0, B2S_ASM = 1, B2S_ASM2 = 2, B2S_ASM3 = 3, B2S_ASM3R = 4, B2S_IMPLS };
 extern uint8_t g_b2s_impl;
 
 // BLAKE2s-256 of an input of len <= 64 bytes, already laid out zero-padded in

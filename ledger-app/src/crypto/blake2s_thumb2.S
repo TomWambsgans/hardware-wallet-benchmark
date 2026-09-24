@@ -2667,6 +2667,7 @@ b2s_compress_asm2:
     pop {r4-r11, pc}
     .size b2s_compress_asm2, . - b2s_compress_asm2
 
+    .global b2s_sigma_ofs
     .p2align 2
 b2s_sigma_ofs:
     .byte 0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60
@@ -2680,10 +2681,10 @@ b2s_sigma_ofs:
     .byte 24, 60, 56, 36, 44, 12, 0, 32, 48, 8, 52, 28, 4, 16, 40, 20
     .byte 40, 8, 32, 16, 28, 24, 4, 20, 60, 44, 36, 56, 12, 48, 52, 0
     .byte 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80
-    .global b2s_compress_asm3
-    .type b2s_compress_asm3, %function
+    .global b2s_compress_asm3_tab
+    .type b2s_compress_asm3_tab, %function
     .thumb_func
-b2s_compress_asm3:
+b2s_compress_asm3_tab:
     push {r4-r11, lr}
     sub sp, sp, #92
     str r0, [sp, #80]
@@ -2715,7 +2716,7 @@ b2s_compress_asm3:
     movt r12, #0xa54f
     str r12, [sp, #76]
     ldm r0, {r0-r7}
-    adr lr, b2s_sigma_ofs
+    ldr lr, [sp, #128]
     str lr, [sp, #84]
     ldrb lr, [lr, #0]
     ldr r12, [sp, #64]
@@ -2938,4 +2939,4 @@ b2s_compress_asm3:
     str r12, [lr, #28]
     add sp, sp, #92
     pop {r4-r11, pc}
-    .size b2s_compress_asm3, . - b2s_compress_asm3
+    .size b2s_compress_asm3_tab, . - b2s_compress_asm3_tab

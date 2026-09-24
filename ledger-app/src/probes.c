@@ -33,8 +33,11 @@ void probe_28(uint32_t iterations, uint32_t *buf);
 void probe_29(uint32_t iterations, uint32_t *buf);
 void probe_30(uint32_t iterations, uint32_t *buf);
 void probe_31(uint32_t iterations, uint32_t *buf);
+void probe_32(uint32_t iterations, uint32_t *buf);
+void probe_33(uint32_t iterations, uint32_t *buf);
+void probe_34(uint32_t iterations, uint32_t *buf);
 
-const uint8_t PROBE_COUNT = 32;
+const uint8_t PROBE_COUNT = 35;
 
 // Instructions per loop iteration of each probe (body + subs + bne, + reset).
 uint32_t probe_insns(unsigned id) {
@@ -68,9 +71,12 @@ uint32_t probe_insns(unsigned id) {
         case 26: return 1538;  // adds16_3072B
         case 27: return 386;  // eor32_1536B
         case 28: return 514;  // eor32_2048B
-        case 29: return 2050;  // adds16_big
-        case 30: return 2050;  // eor32_big
-        case 31: return 2050;  // eor32_ror32_big
+        case 29: return 258;  // ldr_flash
+        case 30: return 258;  // ldr_flash_postinc
+        case 31: return 258;  // ldrb_flash
+        case 32: return 2050;  // adds16_big
+        case 33: return 2050;  // eor32_big
+        case 34: return 2050;  // eor32_ror32_big
         default: return 0;
     }
 }
@@ -109,6 +115,9 @@ void run_probe(unsigned id, uint32_t iterations, uint32_t *buf) {
         case 29: probe_29(iterations, buf); break;
         case 30: probe_30(iterations, buf); break;
         case 31: probe_31(iterations, buf); break;
+        case 32: probe_32(iterations, buf); break;
+        case 33: probe_33(iterations, buf); break;
+        case 34: probe_34(iterations, buf); break;
         default: break;
     }
 }

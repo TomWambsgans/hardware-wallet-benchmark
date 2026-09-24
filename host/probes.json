@@ -272,6 +272,33 @@
  },
  {
   "id": 29,
+  "name": "ldr_flash",
+  "body": [
+   "ldr r2, [r6]"
+  ],
+  "reps": 256,
+  "insns_per_iter": 258
+ },
+ {
+  "id": 30,
+  "name": "ldr_flash_postinc",
+  "body": [
+   "ldr r2, [r6], #0"
+  ],
+  "reps": 256,
+  "insns_per_iter": 258
+ },
+ {
+  "id": 31,
+  "name": "ldrb_flash",
+  "body": [
+   "ldrb r2, [r6, #1]"
+  ],
+  "reps": 256,
+  "insns_per_iter": 258
+ },
+ {
+  "id": 32,
   "name": "adds16_big",
   "body": [
    "adds r2, r2, r3"
@@ -280,7 +307,7 @@
   "insns_per_iter": 2050
  },
  {
-  "id": 30,
+  "id": 33,
   "name": "eor32_big",
   "body": [
    "eor.w r2, r2, r3"
@@ -289,7 +316,7 @@
   "insns_per_iter": 2050
  },
  {
-  "id": 31,
+  "id": 34,
   "name": "eor32_ror32_big",
   "body": [
    "eor.w r2, r2, r3",
