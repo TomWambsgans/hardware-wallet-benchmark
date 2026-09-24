@@ -39,12 +39,13 @@ enum {
     FN_B2S_ASM2    = 2,
     FN_B2S_ASM3    = 3,
     FN_B2S_ASM3R   = 4,
-    FN_SHA256_C    = 5,
-    FN_SHA256_ASM  = 6,
-    FN_SHA256_ASM2 = 7,
-    FN_SHA256_ASM3 = 8,
-    FN_SHA256_ASM3R = 9,
-    FN_SHA256_OS   = 10,
+    FN_B2S_ASM4R   = 5,
+    FN_SHA256_C    = 6,
+    FN_SHA256_ASM  = 7,
+    FN_SHA256_ASM2 = 8,
+    FN_SHA256_ASM3 = 9,
+    FN_SHA256_ASM3R = 10,
+    FN_SHA256_OS   = 11,
     FN_COUNT
 };
 
@@ -64,6 +65,9 @@ static void compress_fn(unsigned fn, uint32_t h[8], const uint32_t m[16], uint32
             break;
         case FN_B2S_ASM3R:
             b2s_compress_asm3r(h, m, t, f);
+            break;
+        case FN_B2S_ASM4R:
+            b2s_compress_asm4r(h, m, t, f);
             break;
         case FN_SHA256_C:
             sha256_compress_c(h, m);
@@ -183,7 +187,7 @@ static void handle(const command_t *cmd) {
             // P1: FN_*. Data: h (8 LE words) || m (16 LE words) [|| t || f, LE, BLAKE2s].
             // Returns h after one compression, to check each function on the device.
             uint32_t h[8], m[16], tf[2] = {0, 0};
-            bool     b2s = cmd->p1 <= FN_B2S_ASM3R;
+            bool     b2s = cmd->p1 <= FN_B2S_ASM4R;
             if (cmd->p1 >= FN_COUNT) {
                 io_send_sw(SW_WRONG_P1P2);
                 return;

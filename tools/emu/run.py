@@ -6,6 +6,7 @@ check them against Python references and count the instructions they execute.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import pathlib
 import struct
@@ -73,7 +74,8 @@ def main():
     emu = Emu()
     emu.call("crypto_tables_init")
     counts = {}
-    for name in ("b2s_compress_c", "b2s_compress_asm", "b2s_compress_asm2", "b2s_compress_asm3", "b2s_compress_asm3r"):
+    for name in ("b2s_compress_c", "b2s_compress_asm", "b2s_compress_asm2", "b2s_compress_asm3", "b2s_compress_asm3r",
+                 "b2s_compress_asm4r"):
         for _ in range(200):
             h = list(struct.unpack("<8I", os.urandom(32)))
             m = list(struct.unpack("<16I", os.urandom(64)))
@@ -91,6 +93,13 @@ def main():
             emu.put(BUF_M, m)
             counts[name] = emu.call(name, BUF_H, BUF_M)
             assert emu.words(BUF_H, 8) == sha256_compress_ref(h, m), f"{name}: wrong output"
+    table = emu.sym["g_sigma_ram"]
+    for _ in range(200):
+        n = os.urandom(1)[0] % 65
+        msg = os.urandom(n)
+        emu.put(BUF_M, list(struct.unpack("<16I", msg.ljust(64, b"\0"))))
+        counts["b2s_th_asm4"] = emu.call("b2s_th_asm4", BUF_H, BUF_M, n, table)
+        assert struct.pack("<4I", *emu.words(BUF_H, 4)) == hashlib.blake2s(msg).digest()[:16], "b2s_th_asm4: wrong"
     print("Python references match hashlib; all functions match them on 200 random inputs each")
     for name, n in counts.items():
         print(f"{name:22s} {n:5d} instructions per compression")

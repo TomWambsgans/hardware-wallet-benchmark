@@ -2940,3 +2940,500 @@ b2s_compress_asm3_tab:
     add sp, sp, #92
     pop {r4-r11, pc}
     .size b2s_compress_asm3_tab, . - b2s_compress_asm3_tab
+
+    .global b2s_compress_asm4_tab
+    .type b2s_compress_asm4_tab, %function
+    .thumb_func
+b2s_compress_asm4_tab:
+    push {r4-r11, lr}
+    sub sp, sp, #92
+    str r0, [sp, #88]
+    ldmia r1!, {r4-r11}
+    stmia sp, {r4-r11}
+    ldmia r1, {r4-r11}
+    add r12, sp, #32
+    stmia r12, {r4-r11}
+    movw r12, #0x527f
+    movt r12, #0x510e
+    eor r12, r12, r2
+    str r12, [sp, #80]
+    movw r10, #0x688c
+    movt r10, #0x9b05
+    movw r8, #0xd9ab
+    movt r8, #0x1f83
+    eor r8, r8, r3
+    movw r9, #0xcd19
+    movt r9, #0x5be0
+    movw r12, #0xe667
+    movt r12, #0x6a09
+    str r12, [sp, #64]
+    movw r12, #0xae85
+    movt r12, #0xbb67
+    str r12, [sp, #68]
+    movw r12, #0xf372
+    movt r12, #0x3c6e
+    str r12, [sp, #72]
+    movw r12, #0xf53a
+    movt r12, #0xa54f
+    str r12, [sp, #76]
+    ldm r0, {r0-r7}
+    ldr r11, [sp, #128]
+    ldrb lr, [r11, #2]
+    ldr r12, [sp, #68]
+    ldr lr, [sp, lr]
+1:
+    add r1, r5
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #3]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r5, r5, r12
+    ror r5, r5, #12
+    add r1, r5
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #0]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r5, r5, r12
+    ror r5, r5, #7
+    str r12, [sp, #68]
+    ldr r12, [sp, #64]
+    str r10, [sp, #84]
+    ldr r10, [sp, #80]
+    add r0, r4
+    add r0, lr
+    eor r10, r10, r0
+    ldrb lr, [r11, #1]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r4, r4, r12
+    ror r4, r4, #12
+    add r0, r4
+    add r0, lr
+    eor r10, r10, r0
+    ldrb lr, [r11, #4]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r4, r4, r12
+    ror r4, r4, #7
+    str r12, [sp, #64]
+    ldr r12, [sp, #72]
+    add r2, r6
+    add r2, lr
+    eor r8, r8, r2
+    ldrb lr, [r11, #5]
+    ror r8, r8, #16
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r6, r6, r12
+    ror r6, r6, #12
+    add r2, r6
+    add r2, lr
+    eor r8, r8, r2
+    ldrb lr, [r11, #6]
+    ror r8, r8, #8
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r6, r6, r12
+    ror r6, r6, #7
+    str r12, [sp, #72]
+    ldr r12, [sp, #76]
+    add r3, r7
+    add r3, lr
+    eor r9, r9, r3
+    ldrb lr, [r11, #7]
+    ror r9, r9, #16
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r7, r7, r12
+    ror r7, r7, #12
+    add r3, r7
+    add r3, lr
+    eor r9, r9, r3
+    ldrb lr, [r11, #10]
+    ror r9, r9, #8
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r7, r7, r12
+    ror r7, r7, #7
+    add r1, r6
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #11]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r6, r6, r12
+    ror r6, r6, #12
+    add r1, r6
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #8]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r6, r6, r12
+    ror r6, r6, #7
+    str r12, [sp, #76]
+    ldr r12, [sp, #72]
+    add r0, r5
+    add r0, lr
+    eor r9, r9, r0
+    ldrb lr, [r11, #9]
+    ror r9, r9, #16
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r5, r5, r12
+    ror r5, r5, #12
+    add r0, r5
+    add r0, lr
+    eor r9, r9, r0
+    ldrb lr, [r11, #12]
+    ror r9, r9, #8
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r5, r5, r12
+    ror r5, r5, #7
+    str r12, [sp, #72]
+    ldr r12, [sp, #64]
+    str r10, [sp, #80]
+    ldr r10, [sp, #84]
+    add r2, r7
+    add r2, lr
+    eor r10, r10, r2
+    ldrb lr, [r11, #13]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r7, r7, r12
+    ror r7, r7, #12
+    add r2, r7
+    add r2, lr
+    eor r10, r10, r2
+    ldrb lr, [r11, #14]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r7, r7, r12
+    ror r7, r7, #7
+    str r12, [sp, #64]
+    ldr r12, [sp, #68]
+    add r3, r4
+    add r3, lr
+    eor r8, r8, r3
+    ldrb lr, [r11, #15]
+    ror r8, r8, #16
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r4, r4, r12
+    ror r4, r4, #12
+    add r3, r4
+    add r3, lr
+    eor r8, r8, r3
+    add r11, r11, #16
+    ror r8, r8, #8
+    ldrb lr, [r11, #2]
+    add r12, r8
+    tst lr, #0x80
+    ldr lr, [sp, lr]
+    eor r4, r4, r12
+    ror r4, r4, #7
+    beq 1b
+    @ finalization
+    str r12, [sp, #68]
+    ldr lr, [sp, #88]
+    str r10, [sp, #84]
+    ldr r12, [sp, #64]
+    eor r0, r0, r12
+    ldr r12, [lr, #0]
+    eor r0, r0, r12
+    str r0, [lr, #0]
+    ldr r12, [sp, #68]
+    eor r1, r1, r12
+    ldr r12, [lr, #4]
+    eor r1, r1, r12
+    str r1, [lr, #4]
+    ldr r12, [sp, #72]
+    eor r2, r2, r12
+    ldr r12, [lr, #8]
+    eor r2, r2, r12
+    str r2, [lr, #8]
+    ldr r12, [sp, #76]
+    eor r3, r3, r12
+    ldr r12, [lr, #12]
+    eor r3, r3, r12
+    str r3, [lr, #12]
+    ldr r12, [lr, #16]
+    eor r12, r12, r4
+    ldr r10, [sp, #80]
+    eor r12, r12, r10
+    str r12, [lr, #16]
+    ldr r12, [lr, #20]
+    eor r12, r12, r5
+    ldr r10, [sp, #84]
+    eor r12, r12, r10
+    str r12, [lr, #20]
+    ldr r12, [lr, #24]
+    eor r12, r12, r6
+    eor r12, r12, r8
+    str r12, [lr, #24]
+    ldr r12, [lr, #28]
+    eor r12, r12, r7
+    eor r12, r12, r9
+    str r12, [lr, #28]
+    add sp, sp, #92
+    pop {r4-r11, pc}
+    .size b2s_compress_asm4_tab, . - b2s_compress_asm4_tab
+
+    .global b2s_th_asm4
+    .type b2s_th_asm4, %function
+    .thumb_func
+b2s_th_asm4:
+    push {r4-r11, lr}
+    sub sp, sp, #92
+    str r0, [sp, #88]
+    str r3, [sp, #92]
+    ldmia r1!, {r4-r11}
+    stmia sp, {r4-r11}
+    ldmia r1, {r4-r11}
+    add r12, sp, #32
+    stmia r12, {r4-r11}
+    movw r12, #0x527f
+    movt r12, #0x510e
+    eor r12, r12, r2
+    str r12, [sp, #80]
+    movw r10, #0x688c
+    movt r10, #0x9b05
+    movw r8, #0x2654
+    movt r8, #0xe07c
+    movw r9, #0xcd19
+    movt r9, #0x5be0
+    movw r12, #0xe667
+    movt r12, #0x6a09
+    str r12, [sp, #64]
+    movw r12, #0xae85
+    movt r12, #0xbb67
+    str r12, [sp, #68]
+    movw r12, #0xf372
+    movt r12, #0x3c6e
+    str r12, [sp, #72]
+    movw r12, #0xf53a
+    movt r12, #0xa54f
+    str r12, [sp, #76]
+    movw r0, #0xe647
+    movt r0, #0x6b08
+    movw r1, #0xae85
+    movt r1, #0xbb67
+    movw r2, #0xf372
+    movt r2, #0x3c6e
+    movw r3, #0xf53a
+    movt r3, #0xa54f
+    movw r4, #0x527f
+    movt r4, #0x510e
+    movw r5, #0x688c
+    movt r5, #0x9b05
+    movw r6, #0xd9ab
+    movt r6, #0x1f83
+    movw r7, #0xcd19
+    movt r7, #0x5be0
+    ldr r11, [sp, #92]
+    ldrb lr, [r11, #2]
+    ldr r12, [sp, #68]
+    ldr lr, [sp, lr]
+1:
+    add r1, r5
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #3]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r5, r5, r12
+    ror r5, r5, #12
+    add r1, r5
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #0]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r5, r5, r12
+    ror r5, r5, #7
+    str r12, [sp, #68]
+    ldr r12, [sp, #64]
+    str r10, [sp, #84]
+    ldr r10, [sp, #80]
+    add r0, r4
+    add r0, lr
+    eor r10, r10, r0
+    ldrb lr, [r11, #1]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r4, r4, r12
+    ror r4, r4, #12
+    add r0, r4
+    add r0, lr
+    eor r10, r10, r0
+    ldrb lr, [r11, #4]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r4, r4, r12
+    ror r4, r4, #7
+    str r12, [sp, #64]
+    ldr r12, [sp, #72]
+    add r2, r6
+    add r2, lr
+    eor r8, r8, r2
+    ldrb lr, [r11, #5]
+    ror r8, r8, #16
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r6, r6, r12
+    ror r6, r6, #12
+    add r2, r6
+    add r2, lr
+    eor r8, r8, r2
+    ldrb lr, [r11, #6]
+    ror r8, r8, #8
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r6, r6, r12
+    ror r6, r6, #7
+    str r12, [sp, #72]
+    ldr r12, [sp, #76]
+    add r3, r7
+    add r3, lr
+    eor r9, r9, r3
+    ldrb lr, [r11, #7]
+    ror r9, r9, #16
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r7, r7, r12
+    ror r7, r7, #12
+    add r3, r7
+    add r3, lr
+    eor r9, r9, r3
+    ldrb lr, [r11, #10]
+    ror r9, r9, #8
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r7, r7, r12
+    ror r7, r7, #7
+    add r1, r6
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #11]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r6, r6, r12
+    ror r6, r6, #12
+    add r1, r6
+    add r1, lr
+    eor r10, r10, r1
+    ldrb lr, [r11, #8]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r6, r6, r12
+    ror r6, r6, #7
+    str r12, [sp, #76]
+    ldr r12, [sp, #72]
+    add r0, r5
+    add r0, lr
+    eor r9, r9, r0
+    ldrb lr, [r11, #9]
+    ror r9, r9, #16
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r5, r5, r12
+    ror r5, r5, #12
+    add r0, r5
+    add r0, lr
+    eor r9, r9, r0
+    ldrb lr, [r11, #12]
+    ror r9, r9, #8
+    ldr lr, [sp, lr]
+    add r12, r9
+    eor r5, r5, r12
+    ror r5, r5, #7
+    str r12, [sp, #72]
+    ldr r12, [sp, #64]
+    str r10, [sp, #80]
+    ldr r10, [sp, #84]
+    add r2, r7
+    add r2, lr
+    eor r10, r10, r2
+    ldrb lr, [r11, #13]
+    ror r10, r10, #16
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r7, r7, r12
+    ror r7, r7, #12
+    add r2, r7
+    add r2, lr
+    eor r10, r10, r2
+    ldrb lr, [r11, #14]
+    ror r10, r10, #8
+    ldr lr, [sp, lr]
+    add r12, r10
+    eor r7, r7, r12
+    ror r7, r7, #7
+    str r12, [sp, #64]
+    ldr r12, [sp, #68]
+    add r3, r4
+    add r3, lr
+    eor r8, r8, r3
+    ldrb lr, [r11, #15]
+    ror r8, r8, #16
+    ldr lr, [sp, lr]
+    add r12, r8
+    eor r4, r4, r12
+    ror r4, r4, #12
+    add r3, r4
+    add r3, lr
+    eor r8, r8, r3
+    add r11, r11, #16
+    ror r8, r8, #8
+    ldrb lr, [r11, #2]
+    add r12, r8
+    tst lr, #0x80
+    ldr lr, [sp, lr]
+    eor r4, r4, r12
+    ror r4, r4, #7
+    beq 1b
+    @ finalization
+    str r12, [sp, #68]
+    ldr lr, [sp, #88]
+    ldr r12, [sp, #64]
+    eor r0, r0, r12
+    movw r12, #0xe647
+    movt r12, #0x6b08
+    eor r0, r0, r12
+    ldr r12, [sp, #68]
+    eor r1, r1, r12
+    movw r12, #0xae85
+    movt r12, #0xbb67
+    eor r1, r1, r12
+    ldr r12, [sp, #72]
+    eor r2, r2, r12
+    movw r12, #0xf372
+    movt r12, #0x3c6e
+    eor r2, r2, r12
+    ldr r12, [sp, #76]
+    eor r3, r3, r12
+    movw r12, #0xf53a
+    movt r12, #0xa54f
+    eor r3, r3, r12
+    stm lr, {r0-r3}
+    add sp, sp, #92
+    pop {r4-r11, pc}
+    .size b2s_th_asm4, . - b2s_th_asm4

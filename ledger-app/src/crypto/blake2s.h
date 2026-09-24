@@ -23,9 +23,13 @@ void b2s_compress_asm2(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t
 // b2s_compress_asm3r from a RAM copy made by crypto_tables_init().
 void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
 void b2s_compress_asm3r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+// v4: v3 with the table row pointer in a register (RAM table).
+void b2s_compress_asm4r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+// The scheme's one-block hash, first 4 digest words (blake2s_thumb2.S).
+void b2s_th_asm4(uint32_t out[4], const uint32_t block[16], uint32_t len, const uint8_t *table);
 void crypto_tables_init(void);
 #endif
-enum { B2S_C = 0, B2S_ASM = 1, B2S_ASM2 = 2, B2S_ASM3 = 3, B2S_ASM3R = 4, B2S_IMPLS };
+enum { B2S_C = 0, B2S_ASM = 1, B2S_ASM2 = 2, B2S_ASM3 = 3, B2S_ASM3R = 4, B2S_ASM4R = 5, B2S_IMPLS };
 extern uint8_t g_b2s_impl;
 
 // BLAKE2s-256 of an input of len <= 64 bytes, already laid out zero-padded in

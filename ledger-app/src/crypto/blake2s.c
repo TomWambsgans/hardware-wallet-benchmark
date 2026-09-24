@@ -28,6 +28,7 @@ static const uint8_t SIGMA[10][16] = {
 
 #if defined(__thumb2__)
 void b2s_compress_asm3_tab(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f, const uint8_t *table);
+void b2s_compress_asm4_tab(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f, const uint8_t *table);
 extern const uint8_t b2s_sigma_ofs[176];
 static uint32_t      g_sigma_ram[44];  // RAM copy of b2s_sigma_ofs (crypto_tables_init)
 
@@ -37,6 +38,10 @@ void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t
 
 void b2s_compress_asm3r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
     b2s_compress_asm3_tab(h, m, t, f, (const uint8_t *) g_sigma_ram);
+}
+
+void b2s_compress_asm4r(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+    b2s_compress_asm4_tab(h, m, t, f, (const uint8_t *) g_sigma_ram);
 }
 
 void sha256_tables_init(void);
@@ -108,6 +113,10 @@ void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
         b2s_compress_asm3r(h, m, t, f);
         return;
     }
+    if (g_b2s_impl == B2S_ASM4R) {
+        b2s_compress_asm4r(h, m, t, f);
+        return;
+    }
 #endif
     b2s_compress_c(h, m, t, f);
 }
@@ -121,8 +130,16 @@ static inline void init_h(uint32_t h[8]) {
 
 void b2s_oneblock(uint32_t *out, unsigned out_words, const uint32_t block[16], uint32_t len) {
     uint32_t h[8];
-    init_h(h);
     g_hash_calls++;
+#if defined(__thumb2__)
+    // v4: straight to the one-block assembly entry (IV constants, 4-word output).
+    if (g_b2s_impl == B2S_ASM4R && out_words == 4) {
+        g_compressions++;
+        b2s_th_asm4(out, block, len, (const uint8_t *) g_sigma_ram);
+        return;
+    }
+#endif
+    init_h(h);
     b2s_compress(h, block, len, 0xFFFFFFFFu);
     memcpy(out, h, out_words * 4);
 }

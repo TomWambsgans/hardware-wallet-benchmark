@@ -560,6 +560,159 @@ def gen_blake2s_v3() -> str:
     return "\n".join(out) + "\n"
 
 
+def gen_blake2s_v4(oneblock: bool = False) -> str:
+    """v3 with the table row pointer in a register (r11): two loads per message word
+    instead of three. The register comes from spilling d0 and d1 too, through a
+    second slot (r10); the G order (column G1 G0 G2 G3, diagonal G1' G0' G2' G3')
+    minimizes slot switches (8 a round, found by exhaustive search) and carries
+    both slots across the loop edge (c1 and d1).
+
+    void b2s_compress_asm4_tab(h, m, t, f, const uint8_t table[176])
+
+    With oneblock: void b2s_th_asm4(uint32_t out[4], const uint32_t block[16], uint32_t len,
+    const uint8_t table[176]) -- the scheme's Th: BLAKE2s-256 of a len <= 64-byte input laid
+    out in block, one final compression from the unkeyed IV, first 4 digest words only."""
+    A = ["r0", "r1", "r2", "r3"]
+    B = ["r4", "r5", "r6", "r7"]
+    DRES = {2: "r8", 3: "r9"}          # resident d words
+    SX, SC, ROWP = "r10", "r12", "r11"  # d0/d1 slot, c slot, table row pointer
+    C_OFF4, D_OFF4, H_OFF4, FRAME4 = 64, 80, 88, 92
+    name = "b2s_th_asm4" if oneblock else "b2s_compress_asm4_tab"
+    out = [HEADER, f"    .global {name}", f"    .type {name}, %function", "    .thumb_func", f"{name}:"]
+    e = out.append
+    e("    push {r4-r11, lr}")
+    e(f"    sub sp, sp, #{FRAME4}")
+    e(f"    str r0, [sp, #{H_OFF4}]")
+    if oneblock:
+        e(f"    str r3, [sp, #{H_OFF4 + 4}]")  # table pointer (r3 is needed below)
+    e("    ldmia r1!, {r4-r11}")
+    e("    stmia sp, {r4-r11}")
+    e("    ldmia r1, {r4-r11}")
+    e("    add r12, sp, #32")
+    e("    stmia r12, {r4-r11}")
+    # d0 = IV4 ^ t (home), d1 = IV5 (slot), d2 = IV6 ^ f, d3 = IV7 (resident).
+    out.extend(mov32("r12", B2S_IV[4]))
+    e("    eor r12, r12, r2")
+    e(f"    str r12, [sp, #{D_OFF4}]")
+    out.extend(mov32(SX, B2S_IV[5]))
+    if oneblock:
+        out.extend(mov32("r8", B2S_IV[6] ^ 0xFFFFFFFF))  # f = final
+    else:
+        out.extend(mov32("r8", B2S_IV[6]))
+        e("    eor r8, r8, r3")
+    out.extend(mov32("r9", B2S_IV[7]))
+    # c homes = IV0..3; the c slot starts with c1.
+    for i in range(4):
+        out.extend(mov32("r12", B2S_IV[i]))
+        e(f"    str r12, [sp, #{C_OFF4 + 4 * i}]")
+    if oneblock:
+        # h = IV with the unkeyed BLAKE2s-256 parameter block in word 0.
+        H0 = [B2S_IV[0] ^ 0x01010020] + B2S_IV[1:]
+        for i in range(8):
+            out.extend(mov32(A[i] if i < 4 else B[i - 4], H0[i]))
+        e(f"    ldr {ROWP}, [sp, #{H_OFF4 + 4}]")
+    else:
+        e("    ldm r0, {r0-r7}")
+        e(f"    ldr {ROWP}, [sp, #{FRAME4 + 36}]")
+    order = [("col", 1), ("col", 0), ("col", 2), ("col", 3), ("dia", 1), ("dia", 0), ("dia", 2), ("dia", 3)]
+
+    def words(kind, k):
+        if kind == "col":
+            return k, k, k, k, 2 * k, 2 * k + 1
+        return k, (k + 1) % 4, (k + 2) % 4, (k + 3) % 4, 8 + 2 * k, 9 + 2 * k
+
+    gs = [words(*o) for o in order]
+    e(f"    ldrb lr, [{ROWP}, #{gs[0][4]}]")
+    e(f"    ldr {SC}, [sp, #{C_OFF4 + 4 * gs[0][2]}]")
+    e("    ldr lr, [sp, lr]")
+    e("1:")
+    in_c, in_x = gs[0][2], 1  # slot contents at the top of the loop: c1, d1
+    for n, (a, b, c, d, xj, yj) in enumerate(gs):
+        assert c == in_c
+        Ar, Br = A[a], B[b]
+        if d in DRES:
+            Dr = DRES[d]
+        else:
+            assert d == in_x
+            Dr = SX
+        last = n == len(gs) - 1
+        e(f"    add {Ar}, {Br}")
+        e(f"    add {Ar}, lr")
+        e(f"    eor {Dr}, {Dr}, {Ar}")
+        e(f"    ldrb lr, [{ROWP}, #{yj}]")
+        e(f"    ror {Dr}, {Dr}, #16")
+        e("    ldr lr, [sp, lr]")
+        e(f"    add {SC}, {Dr}")
+        e(f"    eor {Br}, {Br}, {SC}")
+        e(f"    ror {Br}, {Br}, #12")
+        e(f"    add {Ar}, {Br}")
+        e(f"    add {Ar}, lr")
+        e(f"    eor {Dr}, {Dr}, {Ar}")
+        if not last:
+            e(f"    ldrb lr, [{ROWP}, #{gs[n + 1][4]}]")
+            e(f"    ror {Dr}, {Dr}, #8")
+            e("    ldr lr, [sp, lr]")
+            e(f"    add {SC}, {Dr}")
+            e(f"    eor {Br}, {Br}, {SC}")
+            e(f"    ror {Br}, {Br}, #7")
+            nxt = gs[n + 1]
+            if nxt[2] != in_c:
+                e(f"    str {SC}, [sp, #{C_OFF4 + 4 * in_c}]")
+                e(f"    ldr {SC}, [sp, #{C_OFF4 + 4 * nxt[2]}]")
+                in_c = nxt[2]
+            if nxt[3] not in DRES and nxt[3] != in_x:
+                e(f"    str {SX}, [sp, #{D_OFF4 + 4 * in_x}]")
+                e(f"    ldr {SX}, [sp, #{D_OFF4 + 4 * nxt[3]}]")
+                in_x = nxt[3]
+        else:
+            e(f"    add {ROWP}, {ROWP}, #16")
+            e(f"    ror {Dr}, {Dr}, #8")
+            e(f"    ldrb lr, [{ROWP}, #{gs[0][4]}]")
+            e(f"    add {SC}, {Dr}")
+            e("    tst lr, #0x80")
+            e("    ldr lr, [sp, lr]")
+            e(f"    eor {Br}, {Br}, {SC}")
+            e(f"    ror {Br}, {Br}, #7")
+            assert in_c == gs[0][2] and in_x == 1, (in_c, in_x)
+            e("    beq 1b")
+    e("    @ finalization")
+    e(f"    str {SC}, [sp, #{C_OFF4 + 4 * in_c}]")
+    e(f"    ldr lr, [sp, #{H_OFF4}]")
+    if oneblock:
+        # out[i] = h[i] ^ v[i] ^ v[i+8], i < 4, h the IV constants.
+        H0 = [B2S_IV[0] ^ 0x01010020] + B2S_IV[1:]
+        for i in range(4):
+            e(f"    ldr r12, [sp, #{C_OFF4 + 4 * i}]")
+            e(f"    eor {A[i]}, {A[i]}, r12")
+            out.extend(mov32("r12", H0[i]))
+            e(f"    eor {A[i]}, {A[i]}, r12")
+        e("    stm lr, {r0-r3}")
+        e(f"    add sp, sp, #{FRAME4}")
+        e("    pop {r4-r11, pc}")
+        e(f"    .size {name}, . - {name}")
+        return "\n".join(out) + "\n"
+    e(f"    str {SX}, [sp, #{D_OFF4 + 4 * in_x}]")
+    for i in range(4):
+        e(f"    ldr r12, [sp, #{C_OFF4 + 4 * i}]")
+        e(f"    eor {A[i]}, {A[i]}, r12")
+        e(f"    ldr r12, [lr, #{4 * i}]")
+        e(f"    eor {A[i]}, {A[i]}, r12")
+        e(f"    str {A[i]}, [lr, #{4 * i}]")
+    for i in range(4):
+        e(f"    ldr r12, [lr, #{16 + 4 * i}]")
+        e(f"    eor r12, r12, {B[i]}")
+        if i in DRES:
+            e(f"    eor r12, r12, {DRES[i]}")
+        else:
+            e(f"    ldr r10, [sp, #{D_OFF4 + 4 * i}]")
+            e("    eor r12, r12, r10")
+        e(f"    str r12, [lr, #{16 + 4 * i}]")
+    e(f"    add sp, sp, #{FRAME4}")
+    e("    pop {r4-r11, pc}")
+    e("    .size b2s_compress_asm4_tab, . - b2s_compress_asm4_tab")
+    return "\n".join(out) + "\n"
+
+
 def gen_sha256_v3() -> str:
     """Schedule loop (two words per iteration, W[i-2], W[i-1], W[i-16] carried in
     fixed registers) then round loop (8 rounds per iteration with a..h renamed;
@@ -787,7 +940,9 @@ if __name__ == "__main__":
         [{"id": k, "name": name, "body": body, "reps": reps, "insns_per_iter": len(body) * reps + 2 + int(reset)}
          for k, (name, body, reps, _, reset) in enumerate(PROBES)], indent=1) + "\n")
     (OUT / "blake2s_thumb2.S").write_text(gen_blake2s() + gen_blake2s_v2().replace(HEADER, "")
-                                          + gen_blake2s_v3().replace(HEADER, ""))
+                                          + gen_blake2s_v3().replace(HEADER, "")
+                                          + gen_blake2s_v4().replace(HEADER, "")
+                                          + gen_blake2s_v4(oneblock=True).replace(HEADER, ""))
     (OUT / "sha256_thumb2.S").write_text(gen_sha256() + gen_sha256_v2().replace(HEADER, "")
                                          + gen_sha256_v3().replace(HEADER, ""))
     print("wrote", OUT / "blake2s_thumb2.S", "and", OUT / "sha256_thumb2.S")
