@@ -169,12 +169,22 @@ def cmd_probes(app: App, args):
 def cmd_micro(app: App, args):
     nop = app.nop_latency()
     print(f"usb round trip {nop * 1e3:.2f} ms")
-    for name, us in compressions(app, nop, args.n).items():
+    comp = compressions(app, nop, args.n)
+    for name, us in comp.items():
         print(f"  {name:13s} {us:6.1f} us per compression   {1e6 / us:8.0f} per second   {us * 63.3:6.0f} cycles @63.3MHz")
+    scheme = {}
     for impl in B2S_IMPLS:
         r = micro(app, nop, args.n, impl)
+        scheme[B2S_IMPLS[impl]] = r
         print(f"  scheme with blake2s-{B2S_IMPLS[impl]}: chain step {r['chain_step_us']:.1f} us, "
               f"WOTS leaf {r['ots_leaf_ms']:.2f} ms ({r['ots_leaf_hashes']} hashes)")
+    if args.save:
+        out = REPO / "results" / f"{datetime.date.today()}-{args.label}.json"
+        out.write_text(json.dumps({"date": datetime.datetime.now().isoformat(timespec="seconds"),
+                                   "repo_commit": git_rev(REPO), "app": app.info(),
+                                   "usb_nop_roundtrip_ms": nop * 1e3, "compression_us": comp,
+                                   "scheme_micro": scheme}, indent=2) + "\n")
+        print(f"wrote {out.relative_to(REPO)}")
 
 
 def cmd_compcheck(app: App, args):
@@ -278,7 +288,10 @@ def main():
     sub.add_parser("info")
     sub.add_parser("hashcheck")
     sub.add_parser("compcheck").add_argument("--n", type=int, default=50)
-    sub.add_parser("micro").add_argument("--n", type=int, default=4000)
+    m = sub.add_parser("micro")
+    m.add_argument("--n", type=int, default=4000)
+    m.add_argument("--save", action="store_true")
+    m.add_argument("--label", default="compressions")
     sub.add_parser("probes").add_argument("--save", action="store_true")
     for name in ("vector", "bench"):
         s = sub.add_parser(name)

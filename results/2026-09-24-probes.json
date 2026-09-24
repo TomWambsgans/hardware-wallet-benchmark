@@ -1,5 +1,5 @@
 {
-  "clock_mhz": 62.09561681185565,
+  "clock_mhz": 64.5289413667132,
   "adds16_dep": {
     "cycles_per_body_insn": 1.0,
     "body": [
@@ -8,42 +8,42 @@
     "reps": 256
   },
   "ldr16": {
-    "cycles_per_body_insn": 0.9757655540760195,
+    "cycles_per_body_insn": 1.0167909927116205,
     "body": [
       "ldr r2, [r1]"
     ],
     "reps": 256
   },
   "eor_ror_shifted": {
-    "cycles_per_body_insn": 1.9277701623140597,
+    "cycles_per_body_insn": 2.0100389930580467,
     "body": [
       "eor r2, r2, r3, ror #7"
     ],
     "reps": 256
   },
   "eor32": {
-    "cycles_per_body_insn": 0.9889825701674692,
+    "cycles_per_body_insn": 1.0002371076945267,
     "body": [
       "eor.w r2, r2, r3"
     ],
     "reps": 256
   },
   "ror32_dep": {
-    "cycles_per_body_insn": 0.9535768157928067,
+    "cycles_per_body_insn": 1.0138982071952163,
     "body": [
       "ror r2, r2, #7"
     ],
     "reps": 256
   },
   "rors16_dep": {
-    "cycles_per_body_insn": 1.0254952850463486,
+    "cycles_per_body_insn": 1.0194839207282929,
     "body": [
       "rors r2, r3"
     ],
     "reps": 256
   },
   "adds16_pairs": {
-    "cycles_per_body_insn": 0.9653778628129984,
+    "cycles_per_body_insn": 0.9985644443374939,
     "body": [
       "adds r2, r2, r3",
       "adds r4, r4, r5"
@@ -51,14 +51,14 @@
     "reps": 128
   },
   "eor_shifted_dep": {
-    "cycles_per_body_insn": 1.939644229582917,
+    "cycles_per_body_insn": 2.0095993121424516,
     "body": [
       "eor r2, r3, r2, ror #7"
     ],
     "reps": 256
   },
   "ldr_use": {
-    "cycles_per_body_insn": 1.492962658585169,
+    "cycles_per_body_insn": 1.5192771047655704,
     "body": [
       "ldr r2, [r1]",
       "adds r3, r3, r2"
@@ -66,7 +66,7 @@
     "reps": 128
   },
   "eor32_adds16": {
-    "cycles_per_body_insn": 0.9719941944080062,
+    "cycles_per_body_insn": 1.0009227092675654,
     "body": [
       "eor.w r2, r2, r3",
       "adds r4, r4, r5"
@@ -74,7 +74,7 @@
     "reps": 128
   },
   "ror32_adds16": {
-    "cycles_per_body_insn": 0.9700156082755853,
+    "cycles_per_body_insn": 1.016144023564083,
     "body": [
       "ror r2, r2, #7",
       "adds r4, r4, r5"
@@ -82,7 +82,7 @@
     "reps": 128
   },
   "ldr16_adds16": {
-    "cycles_per_body_insn": 1.0095551952206046,
+    "cycles_per_body_insn": 0.9992263393052809,
     "body": [
       "ldr r2, [r1]",
       "adds r4, r4, r5"
@@ -90,14 +90,14 @@
     "reps": 128
   },
   "add16_high": {
-    "cycles_per_body_insn": 0.9656803638226913,
+    "cycles_per_body_insn": 0.9994891850725101,
     "body": [
       "add r10, r11"
     ],
     "reps": 256
   },
   "eor32_pairs": {
-    "cycles_per_body_insn": 0.9945805935785932,
+    "cycles_per_body_insn": 1.01792507160101,
     "body": [
       "eor.w r2, r2, r3",
       "eor.w r4, r4, r5"
@@ -105,14 +105,14 @@
     "reps": 128
   },
   "ror32_indep": {
-    "cycles_per_body_insn": 0.9694738786019789,
+    "cycles_per_body_insn": 1.014613627757635,
     "body": [
       "ror r2, r3, #7"
     ],
     "reps": 256
   },
   "eor32_ror32_dep": {
-    "cycles_per_body_insn": 0.9521882270949157,
+    "cycles_per_body_insn": 1.0016205048505598,
     "body": [
       "eor.w r2, r2, r3",
       "ror r2, r2, #7"
@@ -120,49 +120,49 @@
     "reps": 128
   },
   "ldr32": {
-    "cycles_per_body_insn": 1.0101575688990057,
+    "cycles_per_body_insn": 0.9988693040504675,
     "body": [
       "ldr.w r2, [r12]"
     ],
     "reps": 256
   },
   "ldr32_postinc": {
-    "cycles_per_body_insn": 1.0077254342972919,
+    "cycles_per_body_insn": 1.0155402081467375,
     "body": [
       "ldr r2, [r12], #4"
     ],
     "reps": 256
   },
   "str16": {
-    "cycles_per_body_insn": 0.9760132784013595,
+    "cycles_per_body_insn": 1.0162646017807275,
     "body": [
       "str r2, [r1]"
     ],
     "reps": 256
   },
   "ldrd": {
-    "cycles_per_body_insn": 1.935389140422848,
+    "cycles_per_body_insn": 2.008539749731609,
     "body": [
       "ldrd r2, r3, [r1]"
     ],
     "reps": 256
   },
   "add_ror_shifted": {
-    "cycles_per_body_insn": 1.933901465273417,
+    "cycles_per_body_insn": 2.008913044297302,
     "body": [
       "add r2, r2, r3, ror #7"
     ],
     "reps": 256
   },
   "eor32_misaligned": {
-    "cycles_per_body_insn": 1.0306004562725397,
+    "cycles_per_body_insn": 1.0173512679328176,
     "body": [
       "eor.w r2, r2, r3"
     ],
     "reps": 256
   },
   "mixed4": {
-    "cycles_per_body_insn": 0.9872791046713745,
+    "cycles_per_body_insn": 1.017663574466959,
     "body": [
       "ldr r2, [r1]",
       "eor.w r4, r4, r5",
@@ -171,22 +171,85 @@
     ],
     "reps": 64
   },
+  "adds16_1536B": {
+    "cycles_per_body_insn": 0.9985747763029899,
+    "body": [
+      "adds r2, r2, r3"
+    ],
+    "reps": 768
+  },
+  "adds16_2048B": {
+    "cycles_per_body_insn": 1.0330457225795746,
+    "body": [
+      "adds r2, r2, r3"
+    ],
+    "reps": 1024
+  },
+  "adds16_2560B": {
+    "cycles_per_body_insn": 1.2594587970449882,
+    "body": [
+      "adds r2, r2, r3"
+    ],
+    "reps": 1280
+  },
+  "adds16_3072B": {
+    "cycles_per_body_insn": 1.256486255183866,
+    "body": [
+      "adds r2, r2, r3"
+    ],
+    "reps": 1536
+  },
+  "eor32_1536B": {
+    "cycles_per_body_insn": 1.0170347125255936,
+    "body": [
+      "eor.w r2, r2, r3"
+    ],
+    "reps": 384
+  },
+  "eor32_2048B": {
+    "cycles_per_body_insn": 1.1131389990352103,
+    "body": [
+      "eor.w r2, r2, r3"
+    ],
+    "reps": 512
+  },
+  "ldr_flash": {
+    "cycles_per_body_insn": 1.5199681202727124,
+    "body": [
+      "ldr r2, [r6]"
+    ],
+    "reps": 256
+  },
+  "ldr_flash_postinc": {
+    "cycles_per_body_insn": 2.0085282380827216,
+    "body": [
+      "ldr r2, [r6], #0"
+    ],
+    "reps": 256
+  },
+  "ldrb_flash": {
+    "cycles_per_body_insn": 1.5069458607373247,
+    "body": [
+      "ldrb r2, [r6, #1]"
+    ],
+    "reps": 256
+  },
   "adds16_big": {
-    "cycles_per_body_insn": 1.212100735921951,
+    "cycles_per_body_insn": 1.2551711763825497,
     "body": [
       "adds r2, r2, r3"
     ],
     "reps": 2048
   },
   "eor32_big": {
-    "cycles_per_body_insn": 2.422776660866408,
+    "cycles_per_body_insn": 2.5215723714238796,
     "body": [
       "eor.w r2, r2, r3"
     ],
     "reps": 2048
   },
   "eor32_ror32_big": {
-    "cycles_per_body_insn": 2.440552117607558,
+    "cycles_per_body_insn": 2.518891503370402,
     "body": [
       "eor.w r2, r2, r3",
       "ror r2, r2, #7"
