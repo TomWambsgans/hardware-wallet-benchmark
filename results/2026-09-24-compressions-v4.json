@@ -1,0 +1,70 @@
+{
+  "date": "2026-09-24T12:28:19",
+  "repo_commit": "5c32c001069f916d75f8f2c63ac67e59079ea15f",
+  "app": {
+    "app_version": "0.1.0",
+    "have_key": false,
+    "yield": false,
+    "blake2s": "asm4r",
+    "crypto_opt": "-O3"
+  },
+  "usb_nop_roundtrip_ms": 3.9998334978008643,
+  "compression_us": {
+    "blake2s-c": 37.035114375612466,
+    "blake2s-asm": 43.48607287465711,
+    "blake2s-asm2": 49.503958372952184,
+    "blake2s-asm3": 34.755708369630156,
+    "blake2s-asm3r": 31.488479125982845,
+    "blake2s-asm4r": 30.02252087389934,
+    "sha256-c": 45.230010375235,
+    "sha256-asm": 63.45783337383182,
+    "sha256-asm2": 72.99424986922531,
+    "sha256-asm3": 43.76778112418833,
+    "sha256-asm3r": 41.024343630851945,
+    "sha256-os": 387.9821670416277
+  },
+  "scheme_micro": {
+    "c": {
+      "blake2s": "c",
+      "chain_step_us": 40.01837512259954,
+      "ots_leaf_ms": 14.008579148503486,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    },
+    "asm": {
+      "blake2s": "asm",
+      "chain_step_us": 47.5534581237298,
+      "ots_leaf_ms": 16.600616650248412,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    },
+    "asm2": {
+      "blake2s": "asm2",
+      "chain_step_us": 53.517052128881915,
+      "ots_leaf_ms": 18.605800050136168,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    },
+    "asm3": {
+      "blake2s": "asm3",
+      "chain_step_us": 37.74362487820326,
+      "ots_leaf_ms": 13.31802085187519,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    },
+    "asm3r": {
+      "blake2s": "asm3r",
+      "chain_step_us": 34.824322876374936,
+      "ots_leaf_ms": 12.082474950875621,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    },
+    "asm4r": {
+      "blake2s": "asm4r",
+      "chain_step_us": 30.050916622712975,
+      "ots_leaf_ms": 10.610679151432123,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347
+    }
+  }
+}

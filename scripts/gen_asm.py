@@ -576,7 +576,10 @@ def gen_blake2s_v4(oneblock: bool = False) -> str:
     B = ["r4", "r5", "r6", "r7"]
     DRES = {2: "r8", 3: "r9"}          # resident d words
     SX, SC, ROWP = "r10", "r12", "r11"  # d0/d1 slot, c slot, table row pointer
-    C_OFF4, D_OFF4, H_OFF4, FRAME4 = 64, 80, 88, 92
+    # m at 0, c homes at 64, d0/d1 homes at 80, h/out pointer at 88, table pointer at 92 (one-block
+    # entry). 36 + 100 keeps sp 8-aligned. Every slot must lie below FRAME4: above it are the
+    # saved registers (a table-pointer store at 92 with a 92-byte frame overwrote the saved r4).
+    C_OFF4, D_OFF4, H_OFF4, FRAME4 = 64, 80, 88, 100
     name = "b2s_th_asm4" if oneblock else "b2s_compress_asm4_tab"
     out = [HEADER, f"    .global {name}", f"    .type {name}, %function", "    .thumb_func", f"{name}:"]
     e = out.append
@@ -584,6 +587,7 @@ def gen_blake2s_v4(oneblock: bool = False) -> str:
     e(f"    sub sp, sp, #{FRAME4}")
     e(f"    str r0, [sp, #{H_OFF4}]")
     if oneblock:
+        assert H_OFF4 + 4 + 4 <= FRAME4
         e(f"    str r3, [sp, #{H_OFF4 + 4}]")  # table pointer (r3 is needed below)
     e("    ldmia r1!, {r4-r11}")
     e("    stmia sp, {r4-r11}")

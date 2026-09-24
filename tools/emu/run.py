@@ -15,7 +15,9 @@ import sys
 from elftools.elf.elffile import ELFFile
 from unicorn import UC_ARCH_ARM, UC_HOOK_CODE, UC_MODE_MCLASS, UC_MODE_THUMB, Uc
 from unicorn.arm_const import (UC_ARM_REG_LR, UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3,
-                               UC_ARM_REG_R9, UC_ARM_REG_SP, UC_CPU_ARM_CORTEX_M33)
+                               UC_ARM_REG_R4, UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7, UC_ARM_REG_R8,
+                               UC_ARM_REG_R9, UC_ARM_REG_R10, UC_ARM_REG_R11, UC_ARM_REG_SP,
+                               UC_CPU_ARM_CORTEX_M33)
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "host"))
 from compress_ref import M32, b2s_compress_ref, check_references, sha256_compress_ref  # noqa: E402
@@ -25,7 +27,10 @@ ELF = pathlib.Path(__file__).resolve().parent / "build" / "emu.elf"
 # --- Emulator -----------------------------------------------------------------
 
 RET = 0x7FFF0000
-STACK_TOP = 0x2000F000
+STACK_TOP = 0x2000EF00   # sp at the call; CALLER_FRAME bytes above it stand for the caller's frame
+CALLER_FRAME = 0x100
+CALLEE_SAVED = (UC_ARM_REG_R4, UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7, UC_ARM_REG_R8, UC_ARM_REG_R9,
+                UC_ARM_REG_R10, UC_ARM_REG_R11)
 BUF_H, BUF_M = 0x2000F100, 0x2000F200
 
 
@@ -50,16 +55,27 @@ class Emu:
         self.count += 1
 
     def call(self, name, *args):
+        """Call a function per the AAPCS and check it honours the calling convention:
+        r4-r11 and sp preserved, and nothing written above sp (the caller's frame, its
+        outgoing stack arguments included)."""
         uc = self.uc
         for reg, val in zip((UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3), args):
             uc.reg_write(reg, val & M32)
-        if len(args) > 4:  # AAPCS: further arguments on the stack
-            uc.mem_write(STACK_TOP, struct.pack(f"<{len(args) - 4}I", *[a & M32 for a in args[4:]]))
+        stack_args = struct.pack(f"<{len(args) - 4}I", *[a & M32 for a in args[4:]]) if len(args) > 4 else b""
+        canary = stack_args + os.urandom(CALLER_FRAME - len(stack_args))
+        uc.mem_write(STACK_TOP, canary)
         uc.reg_write(UC_ARM_REG_SP, STACK_TOP)
-        uc.reg_write(UC_ARM_REG_R9, self.sym["_sb"])  # -frwpi static base
+        saved = {reg: int.from_bytes(os.urandom(4), "little") for reg in CALLEE_SAVED}
+        saved[UC_ARM_REG_R9] = self.sym["_sb"]  # -frwpi static base
+        for reg, val in saved.items():
+            uc.reg_write(reg, val)
         uc.reg_write(UC_ARM_REG_LR, RET | 1)
         self.count = 0
         uc.emu_start(self.sym[name] | 1, RET)
+        for reg, val in saved.items():
+            assert uc.reg_read(reg) == val, f"{name}: callee-saved register {reg} not preserved"
+        assert uc.reg_read(UC_ARM_REG_SP) == STACK_TOP, f"{name}: sp not restored"
+        assert bytes(uc.mem_read(STACK_TOP, CALLER_FRAME)) == canary, f"{name}: wrote into the caller's stack frame"
         return self.count
 
     def words(self, addr, n):

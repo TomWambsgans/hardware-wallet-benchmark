@@ -2946,7 +2946,7 @@ b2s_compress_asm3_tab:
     .thumb_func
 b2s_compress_asm4_tab:
     push {r4-r11, lr}
-    sub sp, sp, #92
+    sub sp, sp, #100
     str r0, [sp, #88]
     ldmia r1!, {r4-r11}
     stmia sp, {r4-r11}
@@ -2977,7 +2977,7 @@ b2s_compress_asm4_tab:
     movt r12, #0xa54f
     str r12, [sp, #76]
     ldm r0, {r0-r7}
-    ldr r11, [sp, #128]
+    ldr r11, [sp, #136]
     ldrb lr, [r11, #2]
     ldr r12, [sp, #68]
     ldr lr, [sp, lr]
@@ -3187,7 +3187,7 @@ b2s_compress_asm4_tab:
     eor r12, r12, r7
     eor r12, r12, r9
     str r12, [lr, #28]
-    add sp, sp, #92
+    add sp, sp, #100
     pop {r4-r11, pc}
     .size b2s_compress_asm4_tab, . - b2s_compress_asm4_tab
 
@@ -3196,7 +3196,7 @@ b2s_compress_asm4_tab:
     .thumb_func
 b2s_th_asm4:
     push {r4-r11, lr}
-    sub sp, sp, #92
+    sub sp, sp, #100
     str r0, [sp, #88]
     str r3, [sp, #92]
     ldmia r1!, {r4-r11}
@@ -3434,6 +3434,6 @@ b2s_th_asm4:
     movt r12, #0xa54f
     eor r3, r3, r12
     stm lr, {r0-r3}
-    add sp, sp, #92
+    add sp, sp, #100
     pop {r4-r11, pc}
     .size b2s_th_asm4, . - b2s_th_asm4
