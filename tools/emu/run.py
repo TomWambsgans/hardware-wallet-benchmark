@@ -35,19 +35,21 @@ BUF_H, BUF_M = 0x2000F100, 0x2000F200
 
 
 class Emu:
-    def __init__(self):
+    def __init__(self, elf=ELF):
         self.uc = Uc(UC_ARCH_ARM, UC_MODE_THUMB | UC_MODE_MCLASS)
         self.uc.ctl_set_cpu_model(UC_CPU_ARM_CORTEX_M33)
         self.uc.mem_map(0x00010000, 0x40000)
         self.uc.mem_map(0x20000000, 0x10000)
         self.uc.mem_map(RET, 0x1000)
-        with open(ELF, "rb") as fh:
+        with open(elf, "rb") as fh:
             elf = ELFFile(fh)
             for seg in elf.iter_segments():
                 if seg["p_type"] == "PT_LOAD" and seg["p_filesz"]:
                     self.uc.mem_write(seg["p_vaddr"], seg.data())
             symtab = elf.get_section_by_name(".symtab")
             self.sym = {s.name: s["st_value"] for s in symtab.iter_symbols() if s.name}
+            self.funcs = sorted((s["st_value"] & ~1, s["st_value"] + s["st_size"], s.name)
+                                for s in symtab.iter_symbols() if s["st_info"]["type"] == "STT_FUNC")
         self.count = 0
         self.uc.hook_add(UC_HOOK_CODE, self._tick)
 

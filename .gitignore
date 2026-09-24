@@ -18,3 +18,4 @@ __pycache__/
 tools/leanvm-vectors/target/
 tools/native/spx_native
 tools/emu/build/
+tools/emu/cxsha/build-*/
