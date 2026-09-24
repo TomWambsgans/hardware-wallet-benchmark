@@ -85,12 +85,10 @@ static void handle(const command_t *cmd) {
             out[0] = MAJOR_VERSION;
             out[1] = MINOR_VERSION;
             out[2] = PATCH_VERSION;
-            out[3] = IMPL_COUNT;
-            out[4] = g_impl;
-            out[5] = G_have_key;
-            out[6] = G_yield;
-            memcpy(out + 7, opt, sizeof(opt));
-            io_send_response_pointer(out, 7 + sizeof(opt), SW_OK);
+            out[3] = G_have_key;
+            out[4] = G_yield;
+            memcpy(out + 5, opt, sizeof(opt));
+            io_send_response_pointer(out, 5 + sizeof(opt), SW_OK);
             return;
         }
 
@@ -124,12 +122,6 @@ static void handle(const command_t *cmd) {
             break;
     }
 
-    // Every command below runs on the BLAKE2s implementation named by P1.
-    if (cmd->p1 >= IMPL_COUNT) {
-        io_send_sw(SW_WRONG_P1P2);
-        return;
-    }
-    g_impl = cmd->p1;
     g_hash_calls = 0;
     g_compressions = 0;
 
@@ -215,7 +207,7 @@ static void handle(const command_t *cmd) {
         }
 
         case INS_HASH: {
-            // BLAKE2s-256(data), to cross-check implementations against the host.
+            // BLAKE2s-256(data), to cross-check against the host.
             uint32_t d[8];
             b2s_hash_bytes(d, cmd->data, cmd->lc);
             io_send_response_pointer((const uint8_t *) d, 32, SW_OK);
@@ -233,7 +225,6 @@ void app_main(void) {
 
     // RAM starts zeroed and initialized globals are not allowed (no .data).
     G_yield = 0;
-    g_impl = IMPL_UNROLLED;
 
     io_init();
     ui_home();

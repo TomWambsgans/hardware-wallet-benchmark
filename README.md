@@ -13,7 +13,7 @@ BLAKE2s** with WOTS+C and FORS+C (leanVM `doc/sphincs/main.tex`, reference
 |---|---|
 | `ledger-app/` | the device app (C, Ledger secure SDK): keygen, sign, microbenchmarks |
 | `ledger-app/src/crypto/sphincs.c` | the scheme, ported from `crates/sphincs`; streaming treehash, 1 KB layer-0 cache |
-| `ledger-app/src/crypto/blake2s.c` | BLAKE2s-256, two run-time-selectable compression functions |
+| `ledger-app/src/crypto/blake2s.c` | BLAKE2s-256 (RFC 7693 compression) and the one-block fast path |
 | `host/sphincs_ref.py` | Python reference (keygen, sign, verify); reproduces leanVM's vectors byte for byte |
 | `host/pqbench.py` | host client: `info`, `hashcheck`, `micro`, `vector`, `bench` |
 | `host/probe.py` | what's plugged in: target id, firmware, running app |
@@ -54,7 +54,7 @@ Nano S Plus firmware 1.6.x is API level 26, the default of `scripts/build.sh`
 scripts/build.sh                 # crypto at -O3 (CRYPTO_OPT=z for the SDK's default -Oz)
 scripts/load.sh                  # device unlocked, on the dashboard; accept the prompts on screen
 # open "PQ Bench" on the device (or let pqbench open it), then:
-.venv/bin/python host/pqbench.py hashcheck   # device BLAKE2s == hashlib, both implementations
+.venv/bin/python host/pqbench.py hashcheck   # device BLAKE2s == hashlib
 .venv/bin/python host/pqbench.py micro       # compression, chain step, WOTS leaf timings
 .venv/bin/python host/pqbench.py vector      # leanVM's key and signatures reproduced on the device
 .venv/bin/python host/pqbench.py bench --sigs 5 --label nanosp-o3
@@ -70,24 +70,21 @@ Ledger Nano S Plus, firmware 1.6.1, SDK API level 26, crypto at `-O3`, no event 
 each identical to the reference signer's and verified). leanVM's own key and two signatures
 (`vectors/`) are also reproduced byte for byte on the device (`pqbench.py vector`).
 
-| BLAKE2s | compression | chain step | WOTS leaf (337 hashes) | keygen (1.38M hashes) | sign, mean (min–max) | hashes / sig |
-|---|---|---|---|---|---|---|
-| blake2s-ref | 40.1 µs | 42.7 µs | 14.9 ms | 61.4 s | 8.38 s (8.16–8.69) | 189K |
-| blake2s-unrolled | 41.1 µs | 44.2 µs | 15.5 ms | 63.6 s | 8.46 s (7.76–9.18) | 182K |
+| compression | chain step | WOTS leaf (337 hashes) | keygen (1.38M hashes) | sign, mean (min–max) | hashes / sig |
+|---|---|---|---|---|---|
+| 40.1 µs | 42.7 µs | 14.9 ms | 61.4 s | 8.38 s (8.16–8.69) | 189K |
 
 - Everything is compression-bound: ≈ 40–45 µs per compression across microbenchmarks, keygen and
   signing, so time ≈ compressions × 43 µs. Signing varies with the grinding (digest trials,
   WOTS counters): 167K–196K hashes here.
-- The rolled (RFC 7693) and unrolled compressions run at the same speed on this core, although the
-  compiler keeps them distinct (the rolled one still reads `SIGMA` and loops over rounds). Both
-  spill heavily (≈190 stores / 310 loads on the stack per compression); hand-written assembly
-  keeping more of the state in registers is the obvious next lever.
+- Unrolling doesn't help: a fully unrolled compression (constant message indices, no `SIGMA`
+  loads) measured the same (41.1 µs, keygen 63.6 s, sign 8.46 s; same results file) and was dropped.
+  The compiled compression spills heavily to the stack (≈190 stores / 310 loads per call).
 
 ## Design choices
 
-- **BLAKE2s implementation** (run time, P1): RFC 7693 loop or fully unrolled. The OS crypto
-  library has no BLAKE2s, so both are app code. The Nano S Plus core is a Cortex-M35P
-  (ARMv8-M mainline, no DSP).
+- **BLAKE2s**: the RFC 7693 compression loop, in the app (the OS crypto library has no BLAKE2s).
+  The Nano S Plus core is a Cortex-M35P (ARMv8-M mainline, no DSP).
 - **Optimization level** of `src/crypto` (build time, `CRYPTO_OPT`): `-O3` by default; the SDK
   builds apps at `-Oz`.
 - **Word-level Th**: every value is 4 little-endian words and every one-block input

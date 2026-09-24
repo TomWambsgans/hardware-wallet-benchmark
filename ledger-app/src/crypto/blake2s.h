@@ -1,20 +1,13 @@
 #pragma once
 
-// BLAKE2s-256 (RFC 7693, unkeyed), with two run-time-selectable compression
-// functions, and the one-block fast path the scheme uses for nearly every call.
+// BLAKE2s-256 (RFC 7693, unkeyed), and the one-block fast path the scheme uses
+// for nearly every call.
 // Everything works on little-endian 32-bit words: on the (little-endian) device
 // a byte string and its word array are the same memory.
 
 #include <stddef.h>
 #include <stdint.h>
 
-enum {
-    IMPL_REF      = 0,  // RFC 7693 loop: rounds and G calls rolled, SIGMA looked up
-    IMPL_UNROLLED = 1,  // all 10 rounds unrolled, message indices constant
-    IMPL_COUNT
-};
-
-extern uint8_t  g_impl;
 extern uint32_t g_hash_calls;    // BLAKE2s evaluations
 extern uint32_t g_compressions;  // compression function calls
 
