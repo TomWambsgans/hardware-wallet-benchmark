@@ -118,6 +118,7 @@ def micro(app: App, impl: int, nop: float, n: int) -> dict:
 
 
 def cmd_micro(app: App, args):
+    app.set_yield(args.yield_)
     nop = app.nop_latency()
     print(f"usb round trip {nop * 1e3:.2f} ms")
     for i in impls_arg(args.impls):
@@ -137,6 +138,7 @@ def check_signature(app: App, name: str, key: tuple, msg: bytes) -> dict:
 
 
 def cmd_vector(app: App, args):
+    app.set_yield(args.yield_)
     vectors = ref.load_vectors()
     seeds = list(dict.fromkeys(v["seed"] for v in vectors))[: args.keys]
     for i in impls_arg(args.impls):
@@ -160,8 +162,8 @@ def git_rev(path: pathlib.Path) -> str:
 
 
 def cmd_bench(app: App, args):
+    app.set_yield(args.yield_)
     info = app.info()
-    app.set_yield(not args.no_yield)
     nop = app.nop_latency()
     res = {
         "date": datetime.datetime.now().isoformat(timespec="seconds"),
@@ -169,14 +171,14 @@ def cmd_bench(app: App, args):
         "device": args.device,
         "firmware": args.firmware,
         "app": info,
-        "yield": not args.no_yield,
+        "yield": args.yield_,
         "repo_commit": git_rev(REPO),
         "sdk_commit": git_rev(REPO / ".sdk" / "API_LEVEL_26"),
         "scheme": "leanVM SPHINCS+ (BLAKE2s, WOTS+C w=3 v=42 T=191, d=3 (12,7,7), FORS+C a=10 k=15), sig 4924 B",
         "usb_nop_roundtrip_ms": nop * 1e3,
         "impls": {},
     }
-    print(f"{info}  usb round trip {nop * 1e3:.2f} ms  yield={'off' if args.no_yield else 'on'}")
+    print(f"{info}  usb round trip {nop * 1e3:.2f} ms  yield={'on' if args.yield_ else 'off'}")
     for i in impls_arg(args.impls):
         name = IMPLS[i]
         r = micro(app, i, nop, args.micro_n)
@@ -221,6 +223,9 @@ def main():
     for name in ("hashcheck", "micro", "vector", "bench"):
         s = sub.add_parser(name)
         s.add_argument("--impls", default="all", help="comma-separated ids (0 blake2s-ref, 1 blake2s-unrolled) or 'all'")
+        if name in ("micro", "vector", "bench"):
+            s.add_argument("--yield", dest="yield_", action="store_true",
+                           help="service the event loop during computations (blocks up to 100 ms per call)")
         if name == "micro":
             s.add_argument("--n", type=int, default=4000)
         if name == "vector":
@@ -229,7 +234,6 @@ def main():
             s.add_argument("--sigs", type=int, default=5)
             s.add_argument("--micro-n", type=int, default=4000)
             s.add_argument("--label", default="run")
-            s.add_argument("--no-yield", action="store_true", help="don't service the event loop during computations")
             s.add_argument("--device", default="Ledger Nano S Plus")
             s.add_argument("--firmware", default="1.6.1")
     args = p.parse_args()

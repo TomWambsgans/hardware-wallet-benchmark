@@ -1,0 +1,163 @@
+{
+  "date": "2026-09-24T11:12:27",
+  "label": "nanosp-o3",
+  "device": "Ledger Nano S Plus",
+  "firmware": "1.6.1",
+  "app": {
+    "app_version": "0.1.0",
+    "impls": 2,
+    "impl": 1,
+    "have_key": true,
+    "yield": false,
+    "crypto_opt": "-O3"
+  },
+  "yield": false,
+  "repo_commit": "8d2cbd1a1d504a76c35319162cbefaa01a4fd7fc",
+  "sdk_commit": "d56084c98523794c7920ca5c5b55a703381ba680",
+  "scheme": "leanVM SPHINCS+ (BLAKE2s, WOTS+C w=3 v=42 T=191, d=3 (12,7,7), FORS+C a=10 k=15), sig 4924 B",
+  "usb_nop_roundtrip_ms": 3.9998124848352745,
+  "impls": {
+    "blake2s-ref": {
+      "compression_us": 40.119703127857065,
+      "chain_step_us": 42.74930737665272,
+      "ots_leaf_ms": 14.901602153258864,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347,
+      "keygen_s": 61.39885839652561,
+      "keygen_hashes": 1384448,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "hashes": 195666,
+          "compressions": 199941,
+          "digest_trials": 536,
+          "counters": [
+            286,
+            26337,
+            16054
+          ],
+          "s": 8.693876520512276
+        },
+        {
+          "hashes": 183071,
+          "compressions": 187536,
+          "digest_trials": 631,
+          "counters": [
+            4791,
+            683,
+            24418
+          ],
+          "s": 8.164434603517293
+        },
+        {
+          "hashes": 191499,
+          "compressions": 195898,
+          "digest_trials": 598,
+          "counters": [
+            14487,
+            7072,
+            16827
+          ],
+          "s": 8.521002062523621
+        },
+        {
+          "hashes": 185424,
+          "compressions": 188949,
+          "digest_trials": 161,
+          "counters": [
+            29406,
+            3268,
+            511
+          ],
+          "s": 8.210118354516453
+        },
+        {
+          "hashes": 187313,
+          "compressions": 190810,
+          "digest_trials": 147,
+          "counters": [
+            17477,
+            16724,
+            901
+          ],
+          "s": 8.290361396488152
+        }
+      ],
+      "sign_s_median": 8.290361396488152,
+      "sign_s_mean": 8.375958587511558,
+      "sign_hashes_mean": 188594.6,
+      "sign_us_per_compression": 43.48283098463744
+    },
+    "blake2s-unrolled": {
+      "compression_us": 41.08976562929456,
+      "chain_step_us": 44.237119629542576,
+      "ots_leaf_ms": 15.50279795046663,
+      "ots_leaf_hashes": 337,
+      "ots_leaf_compressions": 347,
+      "keygen_s": 63.56284677052463,
+      "keygen_hashes": 1384448,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "hashes": 193228,
+          "compressions": 202771,
+          "digest_trials": 3170,
+          "counters": [
+            29481,
+            1047,
+            4443
+          ],
+          "s": 9.179228562526987
+        },
+        {
+          "hashes": 180960,
+          "compressions": 187169,
+          "digest_trials": 1503,
+          "counters": [
+            4768,
+            6824,
+            14445
+          ],
+          "s": 8.443031229500775
+        },
+        {
+          "hashes": 166772,
+          "compressions": 172125,
+          "digest_trials": 1075,
+          "counters": [
+            7335,
+            1651,
+            3719
+          ],
+          "s": 7.759998103501857
+        },
+        {
+          "hashes": 188898,
+          "compressions": 192855,
+          "digest_trials": 377,
+          "counters": [
+            25511,
+            1995,
+            8721
+          ],
+          "s": 8.673215937495115
+        },
+        {
+          "hashes": 178909,
+          "compressions": 182994,
+          "digest_trials": 441,
+          "counters": [
+            1062,
+            14719,
+            10329
+          ],
+          "s": 8.232349854530185
+        }
+      ],
+      "sign_s_median": 8.443031229500775,
+      "sign_s_mean": 8.457564737510983,
+      "sign_hashes_mean": 181753.4,
+      "sign_us_per_compression": 45.087101469383036
+    }
+  }
+}

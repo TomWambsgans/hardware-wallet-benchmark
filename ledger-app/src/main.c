@@ -43,6 +43,9 @@ static bool      G_have_key;
 static uint8_t   G_sig[SPX_SIG_BYTES];
 static uint8_t   G_yield;
 
+// Off by default: io_seproxyhal_io_heartbeat() waits for the next event (the
+// 100 ms ticker when idle), so calling it per WOTS leaf multiplied leaf time by
+// ~6.6. Long computations (a 1-minute keygen) complete fine without it.
 void spx_yield(void) {
     if (G_yield) {
         io_seproxyhal_io_heartbeat();
@@ -229,7 +232,7 @@ void app_main(void) {
     command_t cmd;
 
     // RAM starts zeroed and initialized globals are not allowed (no .data).
-    G_yield = 1;
+    G_yield = 0;
     g_impl = IMPL_UNROLLED;
 
     io_init();
