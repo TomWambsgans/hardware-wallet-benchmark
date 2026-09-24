@@ -244,8 +244,9 @@ def cmd_bench(app: App, args):
     print(f"{info}  usb round trip {nop * 1e3:.2f} ms")
     print("us per compression: " + ", ".join(f"{k} {v:.1f}" for k, v in comp.items()))
     r.update(micro_r)
-    print(f"compression {r['compression_us']:.1f} us, chain step {r['chain_step_us']:.1f} us, "
-          f"WOTS leaf {r['ots_leaf_ms']:.1f} ms")
+    b2s_fn = "blake2s-" + B2S_IMPLS[args.blake2s]
+    print(f"blake2s-{B2S_IMPLS[args.blake2s]}: compression {comp[b2s_fn]:.1f} us, "
+          f"chain step {r['chain_step_us']:.1f} us, WOTS leaf {r['ots_leaf_ms']:.1f} ms")
 
     # Keygen on a host-chosen seed, checked against the reference.
     seed = os.urandom(32)
