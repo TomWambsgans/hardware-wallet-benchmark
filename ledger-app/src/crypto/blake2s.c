@@ -4,6 +4,8 @@
 
 uint32_t g_hash_calls;
 uint32_t g_compressions;
+// No initialized globals on BOLOS (no .data section): the app sets g_b2s_impl.
+uint8_t g_b2s_impl;
 
 static const uint32_t IV[8] = {
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19};
@@ -40,11 +42,10 @@ static inline uint32_t rotr32(uint32_t x, unsigned n) {
         b = rotr32(b ^ c, 7);       \
     } while (0)
 
-// A fully unrolled variant (constant message indices) measured no faster on
-// the Nano S Plus (41.1 vs 40.1 us per compression), so the loop stays.
-void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+// The RFC 7693 loop. A fully unrolled C variant (constant message indices)
+// measured no faster on the Nano S Plus (41.1 vs 40.1 us per compression).
+void b2s_compress_c(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
     uint32_t v[16];
-    g_compressions++;
     for (unsigned i = 0; i < 8; i++) {
         v[i] = h[i];
         v[i + 8] = IV[i];
@@ -65,6 +66,25 @@ void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
     for (unsigned i = 0; i < 8; i++) {
         h[i] ^= v[i] ^ v[i + 8];
     }
+}
+
+void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+    g_compressions++;
+#if defined(__thumb2__)
+    if (g_b2s_impl == B2S_ASM) {
+        b2s_compress_asm(h, m, t, f);
+        return;
+    }
+    if (g_b2s_impl == B2S_ASM2) {
+        b2s_compress_asm2(h, m, t, f);
+        return;
+    }
+    if (g_b2s_impl == B2S_ASM3) {
+        b2s_compress_asm3(h, m, t, f);
+        return;
+    }
+#endif
+    b2s_compress_c(h, m, t, f);
 }
 
 static inline void init_h(uint32_t h[8]) {

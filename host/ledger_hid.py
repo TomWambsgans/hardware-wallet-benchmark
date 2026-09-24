@@ -84,3 +84,17 @@ class Ledger:
         name = b[2 : 2 + n].decode()
         m = b[2 + n]
         return name, b[3 + n : 3 + n + m].decode()
+
+    def quit_app(self):
+        """Ask the running app to exit to the dashboard (B0 A7, handled by the SDK)."""
+        try:
+            self.apdu(0xB0, 0xA7)
+        except (ApduError, TimeoutError, OSError):
+            pass  # the device re-enumerates as the app exits
+
+    def open_app(self, name: str):
+        """Ask the dashboard to start an installed app (E0 D8)."""
+        try:
+            self.apdu(0xE0, 0xD8, data=name.encode(), timeout_s=30)
+        except (ApduError, TimeoutError, OSError):
+            pass

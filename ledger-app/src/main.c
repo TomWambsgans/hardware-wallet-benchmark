@@ -13,7 +13,10 @@
 #include "glyphs.h"
 
 #include "crypto/blake2s.h"
+#include "crypto/sha256.h"
 #include "crypto/sphincs.h"
+#include "probes.h"
+#include "sha256_os.h"
 
 #define CLA 0xE0
 
@@ -24,9 +27,58 @@ enum {
     INS_GET_SIG = 0x04,
     INS_BENCH   = 0x05,
     INS_NOP     = 0x06,
-    INS_HASH    = 0x07,
-    INS_CONFIG  = 0x08,
+    INS_HASH     = 0x07,
+    INS_CONFIG   = 0x08,
+    INS_COMPRESS = 0x09,
 };
+
+// INS_COMPRESS / INS_BENCH compression functions.
+enum {
+    FN_B2S_C       = 0,
+    FN_B2S_ASM     = 1,
+    FN_B2S_ASM2    = 2,
+    FN_B2S_ASM3    = 3,
+    FN_SHA256_C    = 4,
+    FN_SHA256_ASM  = 5,
+    FN_SHA256_ASM2 = 6,
+    FN_SHA256_ASM3 = 7,
+    FN_SHA256_OS   = 8,
+    FN_COUNT
+};
+
+static void compress_fn(unsigned fn, uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f) {
+    switch (fn) {
+        case FN_B2S_C:
+            b2s_compress_c(h, m, t, f);
+            break;
+        case FN_B2S_ASM:
+            b2s_compress_asm(h, m, t, f);
+            break;
+        case FN_B2S_ASM2:
+            b2s_compress_asm2(h, m, t, f);
+            break;
+        case FN_B2S_ASM3:
+            b2s_compress_asm3(h, m, t, f);
+            break;
+        case FN_SHA256_C:
+            sha256_compress_c(h, m);
+            break;
+        case FN_SHA256_ASM:
+            sha256_compress_asm(h, m);
+            break;
+        case FN_SHA256_ASM2:
+            sha256_compress_asm2(h, m);
+            break;
+        case FN_SHA256_ASM3:
+            sha256_compress_asm3(h, m);
+            break;
+        default:
+            sha256_compress_os(h, m);
+            break;
+    }
+}
+
+static uint32_t G_probe_buf[512];
 
 #define SW_OK              0x9000
 #define SW_WRONG_LENGTH    0x6700
@@ -37,6 +89,16 @@ enum {
 #define SW_SIGN_MISMATCH   0x6F02
 
 #define SIG_CHUNK 240
+
+// The key persists in the app's NVM (flash): P, S, root and the 1 KB cache.
+// SECRET KEY MATERIAL, unencrypted: this is a research app on a test device.
+typedef struct {
+    spx_key_t key;
+    uint8_t   valid;
+} stored_key_t;
+
+const stored_key_t N_stored_key_real;
+#define N_stored_key (*(volatile stored_key_t *) PIC(&N_stored_key_real))
 
 static spx_key_t G_key;
 static bool      G_have_key;
@@ -87,8 +149,9 @@ static void handle(const command_t *cmd) {
             out[2] = PATCH_VERSION;
             out[3] = G_have_key;
             out[4] = G_yield;
-            memcpy(out + 5, opt, sizeof(opt));
-            io_send_response_pointer(out, 5 + sizeof(opt), SW_OK);
+            out[5] = g_b2s_impl;
+            memcpy(out + 6, opt, sizeof(opt));
+            io_send_response_pointer(out, 6 + sizeof(opt), SW_OK);
             return;
         }
 
@@ -98,13 +161,38 @@ static void handle(const command_t *cmd) {
 
         case INS_CONFIG:
             // P1: 1 to service the event loop during long computations, 0 not to.
-            if (cmd->p1 > 1) {
+            // P2: the BLAKE2s compression the scheme uses (B2S_*).
+            if (cmd->p1 > 1 || cmd->p2 >= B2S_IMPLS) {
                 io_send_sw(SW_WRONG_P1P2);
                 return;
             }
             G_yield = cmd->p1;
+            g_b2s_impl = cmd->p2;
             io_send_sw(SW_OK);
             return;
+
+        case INS_COMPRESS: {
+            // P1: FN_*. Data: h (8 LE words) || m (16 LE words) [|| t || f, LE, BLAKE2s].
+            // Returns h after one compression, to check each function on the device.
+            uint32_t h[8], m[16], tf[2] = {0, 0};
+            bool     b2s = cmd->p1 <= FN_B2S_ASM3;
+            if (cmd->p1 >= FN_COUNT) {
+                io_send_sw(SW_WRONG_P1P2);
+                return;
+            }
+            if (cmd->lc != (b2s ? 104 : 96)) {
+                io_send_sw(SW_WRONG_LENGTH);
+                return;
+            }
+            memcpy(h, cmd->data, 32);
+            memcpy(m, cmd->data + 32, 64);
+            if (b2s) {
+                memcpy(tf, cmd->data + 96, 8);
+            }
+            compress_fn(cmd->p1, h, m, tf[0], tf[1]);
+            io_send_response_pointer((const uint8_t *) h, 32, SW_OK);
+            return;
+        }
 
         case INS_GET_SIG: {
             // P1: chunk index; chunks of SIG_CHUNK bytes, the last one shorter.
@@ -140,6 +228,12 @@ static void handle(const command_t *cmd) {
             spx_keygen(&G_key, seed);
             explicit_bzero(seed, sizeof(seed));
             G_have_key = true;
+            // Persist: invalidate, write the key, then mark it valid.
+            uint8_t flag = 0;
+            nvm_write((void *) &N_stored_key.valid, &flag, 1);
+            nvm_write((void *) &N_stored_key.key, &G_key, sizeof(G_key));
+            flag = 1;
+            nvm_write((void *) &N_stored_key.valid, &flag, 1);
             memcpy(out, G_key.pp, 16);
             memcpy(out + 16, G_key.root, 16);
             put_be32(out + 32, g_hash_calls);
@@ -173,31 +267,33 @@ static void handle(const command_t *cmd) {
 
         case INS_BENCH: {
             // P2 = 0: count chain steps (a 48-byte Th, one compression each).
-            // P2 = 1: count bare compressions.
+            // P2 = 1: count compressions of function P1 (FN_*).
             // P2 = 2: count WOTS public leaves (337 hashes, 347 compressions each).
+            // P2 = 3: count iterations of timing probe P1 (probes.c).
             if (cmd->lc != 4) {
                 io_send_sw(SW_WRONG_LENGTH);
                 return;
             }
             uint32_t count = get_be32(cmd->data);
             val_t    v = {0};
+            uint32_t h[8] = {0};
+            uint32_t m[16] = {0};
             if (cmd->p2 == 0) {
                 spx_bench_chain(&G_key, count, v);
-            } else if (cmd->p2 == 1) {
-                uint32_t h[8] = {0};
-                uint32_t m[16] = {0};
+            } else if (cmd->p2 == 1 && cmd->p1 < FN_COUNT) {
                 for (uint32_t i = 0; i < count; i++) {
-                    b2s_compress(h, m, 64, 0xFFFFFFFFu);
-                    if ((i & 1023) == 1023) {
-                        spx_yield();
-                    }
+                    compress_fn(cmd->p1, h, m, 64, 0xFFFFFFFFu);
                 }
-                memcpy(v, h, 16);
             } else if (cmd->p2 == 2) {
                 spx_bench_ots_leaf(&G_key, count, v);
+            } else if (cmd->p2 == 3 && cmd->p1 < PROBE_COUNT) {
+                run_probe(cmd->p1, count, G_probe_buf);
             } else {
                 io_send_sw(SW_WRONG_P1P2);
                 return;
+            }
+            if (cmd->p2 != 0 && cmd->p2 != 2) {
+                memcpy(v, h, 16);
             }
             memcpy(out, v, 16);
             put_be32(out + 16, g_hash_calls);
@@ -225,6 +321,11 @@ void app_main(void) {
 
     // RAM starts zeroed and initialized globals are not allowed (no .data).
     G_yield = 0;
+    g_b2s_impl = B2S_C;
+    if (N_stored_key.valid == 1) {
+        memcpy(&G_key, (const void *) &N_stored_key.key, sizeof(G_key));
+        G_have_key = true;
+    }
 
     io_init();
     ui_home();

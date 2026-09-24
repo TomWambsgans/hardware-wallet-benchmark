@@ -11,8 +11,18 @@
 extern uint32_t g_hash_calls;    // BLAKE2s evaluations
 extern uint32_t g_compressions;  // compression function calls
 
-// One compression of block m at byte counter t (inputs here are < 4 GiB), final flag f.
+// One compression of block m at byte counter t (inputs here are < 4 GiB), final
+// flag f, by the implementation g_b2s_impl selects (B2S_*; the C one where there
+// is no Thumb-2 assembly, e.g. natively on the host).
 void b2s_compress(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+void b2s_compress_c(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);
+#if defined(__thumb2__)
+void b2s_compress_asm(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);   // blake2s_thumb2.S
+void b2s_compress_asm2(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);  // blake2s_thumb2.S
+void b2s_compress_asm3(uint32_t h[8], const uint32_t m[16], uint32_t t, uint32_t f);  // blake2s_thumb2.S
+#endif
+enum { B2S_C = 0, B2S_ASM = 1, B2S_ASM2 = 2, B2S_ASM3 = 3, B2S_IMPLS };
+extern uint8_t g_b2s_impl;
 
 // BLAKE2s-256 of an input of len <= 64 bytes, already laid out zero-padded in
 // block: a single compression. Writes the first out_words words of the digest.
