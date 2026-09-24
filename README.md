@@ -7,6 +7,18 @@ BLAKE2s** with WOTS+C and FORS+C (leanVM `doc/sphincs/main.tex`, reference
 (12, 7, 7), a = 10, k = 15; 32-byte public key, 4924-byte signature,
 2^24 signatures per key.
 
+**Headline (Nano S Plus, firmware 1.6.1; details in [Results](#results)):**
+
+| | C (`-O3`) | hand-written Thumb-2 |
+|---|---|---|
+| keygen | 57.6 s | **43.3 s** |
+| sign (mean of 5) | 7.92 s | **5.60 s** |
+| BLAKE2s compression | 37.0 µs (27.0K/s) | **30.0 µs (33.3K/s)** |
+| SHA-256 compression | 45.2 µs (22.1K/s) | **41.0 µs (24.4K/s)** |
+
+Every signature is checked byte for byte against a reference signer and verified; leanVM's own
+vectors are reproduced on the device.
+
 ## Layout
 
 | path | what |
