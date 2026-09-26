@@ -1,53 +1,14 @@
 # Hashes per second on a Ledger Nano S Plus and a Trezor Safe 3
 
-How many BLAKE2s and SHA-256 compressions per second two hardware wallets sustain, with
-hand-written Thumb-2 compression functions (`ledger-app/src/crypto`, the same code on both).
+BLAKE2s and SHA-256 compressions per second, measured during SPHINCS+ signing
+([leanVM's variant](https://github.com/leanEthereum/leanMultisig/blob/5fe073bef6fb1cae20b3a2394c69f60489c2eacf/doc/sphincs/main.tex)).
 
-A tight loop can flatter a hash function, so we also measure throughput in a real workload:
-key generation and signing in leanVM's SPHINCS+ variant ([spec](https://github.com/leanEthereum/leanMultisig/blob/5fe073bef6fb1cae20b3a2394c69f60489c2eacf/doc/sphincs/main.tex);
-WOTS+C and FORS+C, 4924-byte signatures), which spend nearly all their time hashing. The keys
-and signatures the devices produce match the test vectors byte for byte, so the work being
-counted is real.
+| | BLAKE2s | SHA-256 |
+|---|---|---|
+| Trezor Safe 3 | **80.3K/s** | **56.5K/s** |
+| Ledger Nano S Plus | **33.0K/s** | **23.8K/s** |
 
-## Hashes per second
-
-One hash is one compression-function call, i.e. one 64-byte block. Nearly all SPHINCS+ hashes
-take one; the few longer inputs, such as a WOTS key's 42 chain ends, take several. Inside
-SPHINCS+, the rate is the number of compressions the device counted, divided by the time of
-the whole operation, so it includes all the signer's other work.
-
-| device | hash | compression loop | in SPHINCS+ keygen | in SPHINCS+ signing |
-|---|---|---|---|---|
-| Trezor Safe 3 | BLAKE2s | **86.0K/s** (11.6 µs) | 81.5K/s (95%) | 80.3K/s (93%) |
-| Trezor Safe 3 | SHA-256 | **59.4K/s** (16.8 µs) | 57.1K/s (96%) | 56.5K/s (95%) |
-| Ledger Nano S Plus | BLAKE2s | **33.6K/s** (29.8 µs) | 33.2K/s (99%) | 33.0K/s (98%) |
-| Ledger Nano S Plus | SHA-256 | **24.5K/s** (40.9 µs) | 23.9K/s (98%) | 23.8K/s (97%) |
-
-The loop rate holds in the real workload: SPHINCS+ gets 93–99% of it. A compression costs
-about as many cycles on both cores: BLAKE2s 1,861 on the Trezor and ~1,880 on the Ledger,
-SHA-256 2,692 and ~2,580. The Ledger figures are estimated from its ~63 MHz clock. The
-Cortex-M35P is a Cortex-M33 with physical-attack countermeasures. The Trezor (STM32U585 at
-160 MHz) is faster by its clock.
-
-`host/rates.py` prints this table from `results/*.json`, which hold every timing.
-
-### SPHINCS+ timings
-
-| | keygen (1.43M hashes) | sign, mean (min–max) | hashes per signature |
-|---|---|---|---|
-| Trezor Safe 3, BLAKE2s | 17.5 s | 2.47 s (2.25–2.84) | 180K–231K |
-| Trezor Safe 3, SHA-256 | 25.0 s | 3.70 s (3.10–4.17) | 173K–236K |
-| Ledger Nano S Plus, BLAKE2s | 42.9 s | 6.26 s (5.57–7.57) | 184K–251K |
-| Ledger Nano S Plus, SHA-256 | 59.7 s | 8.89 s (7.39–10.55) | 175K–251K |
-
-Keygen keeps a 1 KB cache of layer 0's tree for the signer. Signing time varies with the
-message, through the signer's two grinding loops (the randomizer and the WOTS+C encoding
-counters). There are 5 signatures per hash and device.
-
-Each run checks the device against the vectors: the public key, and the signatures byte for
-byte. The Python reference verifies the random-message signatures. Devices: Nano S Plus on
-firmware 1.6.1; Safe 3 running Trezor's production-test firmware with our commands added
-(`trezor/`).
+Signatures match the test vectors. Raw data: `results/*.json`; table: `host/rates.py`.
 
 ## The scheme
 
@@ -209,7 +170,7 @@ with bootloader 2.1.16 and official firmware 2.12.5.
 | `ledger-app/src/main.c` | the app: APDUs for keygen, sign, signature readout, compression benchmark |
 | `host/sphincs_ref.py` | Python reference (keygen, sign, verify), both hashes |
 | `host/pqbench.py` | runs the benchmark against the Ledger |
-| `host/rates.py` | the hashes-per-second table, from `results/*.json` |
+| `host/rates.py` | the README table, from `results/*.json` |
 | `trezor/` | the Trezor Safe 3 port: prodtest commands, build, benchmark |
 | `tests/` | native and emulator checks; `leanvm-vectors/` regenerates `vectors/blake2s.json` |
 
