@@ -24,20 +24,36 @@ It fetches trezor-firmware at a pinned commit into `trezor/trezor-firmware/`, ad
 Docker build. The image is non-production: signed with Trezor's public development keys under
 the "unsafe" vendor header. The first build sets up Trezor's Nix environment and takes a while.
 
-## Install — irreversible
+## Install and run
 
-A Safe 3 runs such firmware only once its bootloader is unlocked, which is **irreversible**: the
-device's attestation key becomes permanently inaccessible and Trezor Suite reports it as
-non-authentic for good (see Trezor's "Unlocking the bootloader on Trezor Safe devices"). Use a
-test device. Installing wipes the device.
+> [!CAUTION]
+> Installing this firmware requires **permanently unlocking the Safe 3's bootloader**. Unlocking
+> is irreversible: the device can never again prove it is genuine, and it loses its secure
+> element's attestation for good. **Use a test device only.** The full procedure and every
+> consequence are in the [top README, "Reproduce", section 2](../README.md#2-trezor-safe-3).
 
-1. Bootloader mode: disconnect, hold both buttons while reconnecting USB.
-2. `.venv/bin/trezorctl device unlock-bootloader`, confirm on the device (once per device).
-3. Bootloader mode again, then `.venv/bin/trezorctl firmware update -f <prodtest.bin>`, confirm.
-4. At every start the device shows the red "UNSAFE" vendor screen: confirm with a button.
+In short:
+1. `trezor/build.sh`
+2. Bootloader mode, then `trezorctl device unlock-bootloader` (**irreversible**).
+3. Bootloader mode, then `trezorctl firmware update -f <prodtest.bin>`.
+4. Press a button on the "UNSAFE" screen.
+5. `.venv/bin/python trezor/bench.py`
 
-## Run
+## Results
 
-```sh
-.venv/bin/python trezor/bench.py   # writes results/trezor-safe3.json
-```
+`results/trezor-safe3.json` (bootloader 2.1.16, prodtest 0.3.10 at trezor-firmware 3227ea8):
+
+| | BLAKE2s | SHA-256 |
+|---|---|---|
+| compression function | 1,861 cycles, 11.6 µs | 2,692 cycles, 16.8 µs |
+| keygen (1.43M compressions) | 17.5 s | 25.0 s |
+| sign, mean (min–max) | 2.47 s (2.25–2.84) | 3.70 s (3.10–4.17) |
+
+## Notes
+
+- The commands run inside prodtest, not Trezor's wallet firmware: no Trezor logic is on the
+  path, and the key stays in RAM until the next reboot.
+- `prodtest-build.patch` changes two files. `build.rs` compiles our sources.
+  `build-docker.sh` skips the fingerprints Trezor computes for its signing ceremony, which
+  have no label for the unsafe vendor header.
+- T3B1 enables no watchdog, so a long command (a keygen takes up to 25 s) is not interrupted.

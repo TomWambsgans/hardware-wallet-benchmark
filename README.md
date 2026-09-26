@@ -1,9 +1,10 @@
-# SPHINCS+ on a Ledger Nano S Plus
+# SPHINCS+ on a Ledger Nano S Plus and a Trezor Safe 3
 
 leanVM's SPHINCS+ variant (WOTS+C, FORS+C; 32-byte public keys, 4924-byte signatures,
-2^24 signatures per key) running on the Nano S Plus secure element: key generation with the
-signer's 1 KB layer-0 cache, and signing. The scheme is instantiated with two hashes, each with
-a hand-written Thumb-2 compression function.
+2^24 signatures per key) running on the Nano S Plus secure element and on the Trezor Safe 3's
+microcontroller: key generation with the signer's 1 KB layer-0 cache, and signing. The scheme
+is instantiated with two hashes, each with a hand-written Thumb-2 compression function; both
+devices run the same C and assembly (`ledger-app/src/crypto`).
 
 ## Results
 
@@ -16,10 +17,25 @@ Ledger Nano S Plus, firmware 1.6.1 (`results/nanosp.json`; 5 signatures per hash
 | sign, mean (min–max) | 6.26 s (5.57–7.57) | 8.89 s (7.39–10.55) |
 | compressions per signature | 184K–251K | 175K–251K |
 
+Trezor Safe 3 (STM32U585, Cortex-M33 at 160 MHz), Trezor's production-test firmware with our
+commands added (`trezor/`; `results/trezor-safe3.json`; 5 signatures per hash):
+
+| | BLAKE2s | SHA-256 |
+|---|---|---|
+| compression function | **11.6 µs (86.0K/s)** | **16.8 µs (59.4K/s)** |
+| keygen (1.43M compressions) | 17.5 s | 25.0 s |
+| sign, mean (min–max) | 2.47 s (2.25–2.84) | 3.70 s (3.10–4.17) |
+| compressions per signature | 180K–231K | 173K–236K |
+
+A compression takes about as many cycles on both cores (BLAKE2s 1,861 on the Trezor, ~1,880 on
+the Ledger; SHA-256 2,692 and ~2,580; the Ledger's are estimated from its ~63 MHz clock): the
+Cortex-M35P is a Cortex-M33 with physical-attack countermeasures. The Trezor is faster by its
+clock.
+
 Signing cost varies with the message, through the signer's two grinding loops (the randomizer
 and the WOTS+C encoding counters).
 
-`results/nanosp.json` holds every timing. Each run checks the device against the vectors
+`results/*.json` hold every timing. Each run checks the device against the vectors
 (public key, and signatures byte for byte) and verifies the random-message signatures with
 the Python reference.
 
@@ -42,29 +58,134 @@ and this cache are stored in the app's flash, so signing works right after reope
 
 ## Reproduce
 
-Needs a Nano S Plus on firmware 1.6.x (a test device: the app signs without confirmation),
-Docker (on macOS e.g. `brew install colima docker && colima start`) and Python 3.
+> [!CAUTION]
+> **Both benchmarks install unofficial, experimental code on a hardware wallet. Use dedicated
+> test devices that hold no funds and no recovery phrase you need.** The Trezor procedure
+> **permanently** removes the Trezor Safe 3's ability to prove it is genuine: it cannot be
+> undone, by you or by Trezor. Read each device's warnings before you start.
+
+### 0. Host (no device involved)
+
+Needs Docker (on macOS e.g. `brew install colima docker && colima start`), Python 3 and network
+access.
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r host/requirements.txt
-scripts/build.sh                  # the app, in Ledger's builder image (pinned) with the pinned SDK
-scripts/load.sh                   # device unlocked: accept the two prompts; opens the app
-.venv/bin/python host/pqbench.py  # ~4 minutes; writes results/nanosp.json
-```
-
-The build is deterministic: `ledger-app/build/nanos2/bin/app.elf` has SHA-256
-`329c797c991887046d708fa8d30cdbed8893edd4d2a40026ebf2ca8be2d474a5`.
-
-The screen freezes during key generation and signing: the app does not service the event loop
-while computing (the Nano S Plus has no watchdog requiring it).
-
-Checks that need no device:
-
-```sh
 .venv/bin/python host/sphincs_ref.py                      # Python reference == vectors
 python3 tests/native/check.py                             # device C code, built natively == vectors
 tests/emu/build.sh && .venv/bin/python tests/emu/run.py   # Thumb-2 == reference, calling convention
 ```
+
+### 1. Ledger Nano S Plus
+
+> [!WARNING]
+> **What this does to the Ledger:**
+> - It installs ("sideloads") an **unsigned app**, which is not reviewed by Ledger. The device
+>   asks you to allow an unsafe manager and to confirm the install.
+> - The app **signs anything, with no on-screen confirmation**, and keeps its SPHINCS+ key
+>   **unencrypted** in its flash. The benchmark derives that key from a public test seed sent
+>   by the host; the app never reads the device's own recovery phrase.
+> - The app runs hand-written assembly with no attack countermeasures. During development, a
+>   (since fixed) bug in it hung a Nano S Plus, and recovering the device **wiped it**. **Keep
+>   the device's recovery phrase, or keep nothing on the device.**
+> - Otherwise it is reversible: removing the app (step 5) deletes it along with its key.
+
+Needs a Nano S Plus on firmware 1.6.x (`scripts/load.sh` refuses anything else), unlocked with
+its PIN, on the dashboard.
+
+1. Build the app (Ledger's pinned builder image, pinned SDK):
+   ```sh
+   scripts/build.sh
+   ```
+   The build is deterministic: `ledger-app/build/nanos2/bin/app.elf` has SHA-256
+   `329c797c991887046d708fa8d30cdbed8893edd4d2a40026ebf2ca8be2d474a5`.
+2. Install it and open it:
+   ```sh
+   scripts/load.sh
+   ```
+   On the device, accept both prompts: allow the unsafe manager, then confirm the install.
+3. Run the benchmark (~4 minutes; writes `results/nanosp.json`):
+   ```sh
+   .venv/bin/python host/pqbench.py
+   ```
+   The screen freezes during key generation and signing, because the app does not service the
+   event loop while it computes. That is expected. Do not unplug the device during the run.
+4. The benchmark checks itself: it stops with an error if the public key or a vector signature
+   differs from `vectors/`, or if a random-message signature fails to verify.
+5. Remove the app when you are done, and confirm on the device:
+   ```sh
+   .venv/bin/python -m ledgerblue.deleteApp --targetId 0x33100004 --appName "PQ Bench"
+   ```
+
+### 2. Trezor Safe 3
+
+> [!CAUTION]
+> **Step 4 is IRREVERSIBLE. It permanently degrades the device. Do not do this to a Trezor you
+> want to use as a wallet, ever again.**
+>
+> A Safe 3 runs non-Trezor firmware only after its bootloader is unlocked. Unlocking **erases
+> the factory secret keys** from the chip's write-once secret area, and nothing can re-create
+> them. The results:
+> - **Trezor Suite's authenticity check fails forever.** The device can never again prove it is
+>   a genuine Trezor.
+> - Official firmware still installs and runs, but **without its paired secure element**, so
+>   device attestation and FIDO attestation are **permanently lost**. We have not audited what
+>   else this weakens: **treat the device as insecure from then on.**
+> - **The device is erased**, both at the unlock and at the firmware install. Any wallet on it
+>   is gone unless you hold its recovery phrase.
+> - The bootloader now accepts **any firmware signed with Trezor's publicly known development
+>   keys**, which anyone can produce. Anyone with physical access can install arbitrary code.
+> - Every boot shows a red **"UNSAFE, DO NOT USE!"** vendor screen, which you dismiss with a
+>   button.
+>
+> Going back to official firmware later works (step 8), but the bootloader stays unlocked and
+> every point above still applies.
+
+Needs a Trezor Safe 3 (T3B1) with bootloader 2.1.8 or later, the first that can be unlocked.
+Installing the latest official firmware updates the bootloader. In bootloader mode,
+`trezorctl get-features` shows the bootloader version as `major/minor/patch_version`. Tested
+with bootloader 2.1.16 and official firmware 2.12.5.
+
+1. Build the firmware: Trezor's production-test firmware (prodtest), with our commands added,
+   signed with the development keys, under the unsafe vendor header. This runs Trezor's
+   reproducible Docker build; the first run builds Trezor's Nix environment and takes a long
+   time.
+   ```sh
+   trezor/build.sh
+   ```
+   It prints the image path: `trezor/trezor-firmware/build/core-T3B1/prodtest/prodtest.bin`.
+2. Check the image offline (no device needed). It must say `T3B1 firmware image` and
+   `Vendor header from UNSAFE, DO NOT USE!`:
+   ```sh
+   .venv/bin/trezorctl firmware verify trezor/trezor-firmware/build/core-T3B1/prodtest/prodtest.bin
+   ```
+3. Put the device in **bootloader mode**: unplug it, hold both buttons, plug it back in. If it
+   runs official firmware, `.venv/bin/trezorctl device reboot-to-bootloader` does the same,
+   after a confirmation on the device.
+4. ⚠️ **IRREVERSIBLE: unlock the bootloader.** Read the caution above first.
+   ```sh
+   .venv/bin/trezorctl device unlock-bootloader
+   ```
+   Confirm on the device. It erases itself and restarts.
+   `.venv/bin/trezorctl get-features` then shows `bootloader_locked: False`.
+5. Bootloader mode again (step 3), then install the firmware (this **erases the device**):
+   ```sh
+   .venv/bin/trezorctl firmware update -f trezor/trezor-firmware/build/core-T3B1/prodtest/prodtest.bin
+   ```
+   Confirm the unofficial-firmware warning on the device. If it fails with "Firmware downgrade
+   protection", the device has run official firmware newer than the trezor-firmware commit
+   pinned in `trezor/build.sh`. Move that pin forward and rebuild.
+6. The device restarts on the red "UNSAFE, DO NOT USE!" screen: press a button. Prodtest then
+   runs and shows up as a USB serial port (`/dev/cu.usbmodem*` on macOS).
+7. Run the benchmark (~2 minutes; writes `results/trezor-safe3.json`). It checks its results as
+   the Ledger one does, and also checks the CPU clock against the host's clock.
+   ```sh
+   .venv/bin/python trezor/bench.py
+   ```
+   The key lives in RAM: every run generates it again.
+8. To go back to official firmware: enter bootloader mode, then install official firmware with
+   Trezor Suite, or run `.venv/bin/trezorctl firmware update` (which downloads it). **The
+   bootloader stays unlocked, and the device stays unable to prove it is genuine.**
 
 ## Layout
 
@@ -77,6 +198,7 @@ tests/emu/build.sh && .venv/bin/python tests/emu/run.py   # Thumb-2 == reference
 | `ledger-app/src/main.c` | the app: APDUs for keygen, sign, signature readout, compression benchmark |
 | `host/sphincs_ref.py` | Python reference (keygen, sign, verify), both hashes |
 | `host/pqbench.py` | runs the benchmark against the device |
+| `trezor/` | the Trezor Safe 3 port: prodtest commands, build, benchmark |
 | `tests/` | native and emulator checks; `leanvm-vectors/` regenerates `vectors/blake2s.json` |
 
 ## Notes
@@ -87,5 +209,9 @@ tests/emu/build.sh && .venv/bin/python tests/emu/run.py   # Thumb-2 == reference
   small loops with explicit rotations, loads issued ahead of use, and tables copied to RAM
   (`scripts/gen_asm.py` documents the register allocation). The chip has no hash hardware, and
   the OS's own SHA-256 (`cx_sha256`) takes ~390 µs per compression.
+- **Trezor Safe 3.** The commands run inside Trezor's production-test firmware (a C command line
+  over USB serial), so no Trezor firmware logic is involved; the key lives in RAM until the
+  next reboot. The STM32U585 has a SHA-256 peripheral, not used here: it computes padded
+  SHA-256, not this scheme's bare compression.
 - **Not production code**: no on-screen confirmation, no side-channel or fault-attack
   countermeasures, key unencrypted in flash.

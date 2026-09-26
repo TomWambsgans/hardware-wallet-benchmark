@@ -1,0 +1,83 @@
+{
+  "date": "2026-09-26T18:09:09",
+  "device": "Trezor Safe 3 (T3B1)",
+  "firmware": "prodtest + SPHINCS+ commands (trezor/build.sh)",
+  "cpu_hz": 160000000,
+  "repo_commit": "196177f",
+  "hashes": {
+    "blake2s": {
+      "measured_hz": 159761203.62105107,
+      "compression_cycles": 1861.20018,
+      "compression_us": 11.632501125,
+      "keygen_s": 17.49600556875,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "message": "vector",
+          "s": 2.37069793125,
+          "compressions": 189076
+        },
+        {
+          "message": "vector",
+          "s": 2.29694085,
+          "compressions": 183843
+        },
+        {
+          "message": "178a772193118a73ed419be28b04731bee3ac416d6ccde3ca2e2f2420176e7c3",
+          "s": 2.84328864375,
+          "compressions": 230661
+        },
+        {
+          "message": "7752b4005b8d6e56de46e5218a1e3167cfbff84985f2150077e9d8f295cd9d5b",
+          "s": 2.2524043875,
+          "compressions": 179536
+        },
+        {
+          "message": "2719e0246350bf10474ec5913ee42ef414bea41e69dc3a27d7aee8a8e4fec270",
+          "s": 2.56836286875,
+          "compressions": 207117
+        }
+      ],
+      "sign_s_mean": 2.4663389362499997,
+      "sign_s_min": 2.2524043875,
+      "sign_s_max": 2.84328864375
+    },
+    "sha256": {
+      "measured_hz": 160122112.65527374,
+      "compression_cycles": 2691.58226,
+      "compression_us": 16.822389125,
+      "keygen_s": 24.98293450625,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "message": "vector",
+          "s": 4.1743690375,
+          "compressions": 236371
+        },
+        {
+          "message": "vector",
+          "s": 3.84265234375,
+          "compressions": 218255
+        },
+        {
+          "message": "9993f6f8008e65a50c644e1074279857f6bd78f4a39398fa4f69e8073a486f2f",
+          "s": 3.51657404375,
+          "compressions": 198719
+        },
+        {
+          "message": "892801c9e81dd5767af68c20c801779c09295e4722372bd6eb8a6a91bf7a3d0f",
+          "s": 3.84480640625,
+          "compressions": 217102
+        },
+        {
+          "message": "c5feda71def801e9557289a3c3e4dd82e3e1d46dcfe0fcd2eed539cda4db4275",
+          "s": 3.1016450875,
+          "compressions": 173097
+        }
+      ],
+      "sign_s_mean": 3.69600938375,
+      "sign_s_min": 3.1016450875,
+      "sign_s_max": 4.1743690375
+    }
+  }
+}
