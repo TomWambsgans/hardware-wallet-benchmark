@@ -16,7 +16,9 @@ if [ "$(git -C "$SDK_DIR" rev-parse HEAD 2>/dev/null)" != "$SDK_COMMIT" ]; then
     git -C "$SDK_DIR" checkout -q FETCH_HEAD
 fi
 
-mkdir -p "$ROOT/ledger-app/glyphs"  # the SDK writes the home-screen icon there
+# The SDK generates the home-screen icon into glyphs/ and lists that directory before building:
+# start from an empty one so every build is identical.
+rm -rf "$ROOT/ledger-app/glyphs" && mkdir -p "$ROOT/ledger-app/glyphs"
 docker run --rm -u "$(id -u):$(id -g)" -v "$ROOT:/work" -w /work/ledger-app \
     -e BOLOS_SDK=/work/.sdk -e TARGET=nanos2 "$IMAGE" \
     bash -c "set -o pipefail; make clean >/dev/null 2>&1 && make -j 2>&1 | grep -v 'No names found'"

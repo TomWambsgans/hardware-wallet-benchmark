@@ -52,6 +52,9 @@ scripts/load.sh                   # device unlocked: accept the two prompts; ope
 .venv/bin/python host/pqbench.py  # ~4 minutes; writes results/nanosp.json
 ```
 
+The build is deterministic: `ledger-app/build/nanos2/bin/app.elf` has SHA-256
+`329c797c991887046d708fa8d30cdbed8893edd4d2a40026ebf2ca8be2d474a5`.
+
 The screen freezes during key generation and signing: the app does not service the event loop
 while computing (the Nano S Plus has no watchdog requiring it).
 
