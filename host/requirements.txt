@@ -1,4 +1,6 @@
 hidapi       # USB transport
 ledgerblue   # app installation (scripts/load.sh)
+pyserial     # Trezor prodtest serial port (trezor/bench.py)
+trezor       # trezorctl: Trezor bootloader unlock and firmware install
 unicorn      # tests/emu
 pyelftools   # tests/emu
