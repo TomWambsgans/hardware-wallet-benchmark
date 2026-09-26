@@ -16,6 +16,7 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import statistics
 import subprocess
 import sys
@@ -40,16 +41,20 @@ class Prodtest:
             port = ports[0]
         self.port = port
         self.ser = serial.Serial(port, 115200, timeout=600)
+        # leave interactive mode if a terminal left it on (it colors OK/ERROR); a no-op otherwise
+        self.ser.write(b".\r")
+        time.sleep(0.5)
         self.ser.reset_input_buffer()
 
     def cmd(self, line: str) -> tuple[list[str], list[str]]:
         """Send a command; return (OK fields, PROGRESS lines)."""
-        self.ser.write((line + "\r\n").encode())
+        self.ser.write((line + "\r").encode())  # \r alone: every \r or \n ends a line
         progress = []
         while True:
-            reply = self.ser.readline().decode(errors="replace").strip()
-            if not reply:
+            raw = self.ser.readline()
+            if not raw:
                 raise TimeoutError(f"no reply to {line.split()[0]}")
+            reply = re.sub(r"\x1b\[[0-9;]*m", "", raw.decode(errors="replace")).strip()
             if reply.startswith("OK"):
                 return reply.split()[1:], progress
             if reply.startswith("ERROR"):

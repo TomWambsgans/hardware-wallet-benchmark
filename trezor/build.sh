@@ -4,7 +4,9 @@
 # ledger-app/src/crypto (same C scheme, same Thumb-2 compressions).
 #
 # 1. clones trezor-firmware at a pinned commit into trezor/trezor-firmware/ (gitignored),
-# 2. adds our files and build.rs patch on a local branch `sphincs-bench`,
+# 2. adds our files and prodtest-build.patch on a local branch `sphincs-bench` (build.rs:
+#    compile our sources; build-docker.sh: skip the signing fingerprints, which have no
+#    label for the unsafe vendor header and would abort the build),
 # 3. runs Trezor's reproducible Docker build (Nix inside Docker; the first run builds the
 #    environment and takes a while) for T3B1 prodtest, non-production: signed with the
 #    public development keys, under the "unsafe" vendor header -- the combination an

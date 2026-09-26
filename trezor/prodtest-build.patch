@@ -1,3 +1,17 @@
+diff --git a/build-docker.sh b/build-docker.sh
+index 708ffc1..3e409a4 100755
+--- a/build-docker.sh
++++ b/build-docker.sh
+@@ -358,7 +358,8 @@ for TREZOR_MODEL in ${MODELS[@]}; do
+       done
+       for item in bootloader secmon kernel firmware prodtest; do
+         # Append the labeled fingerprint, preceded by '# <artifact name>'.
+-        if [ "\$item" != kernel ] && [ -s build-xtask/artifacts/$TREZOR_MODEL/\$item.bin ]; then
++        # (none under a custom vendor header, e.g. the unsafe one: no signing label exists)
++        if [ "\$item" != kernel ] && [ -z "$VENDOR_HEADER" ] && [ -s build-xtask/artifacts/$TREZOR_MODEL/\$item.bin ]; then
+           src=\$(ls build-xtask/artifacts/pub/\$item-$TREZOR_MODEL*.bin 2>/dev/null | head -n1 || true)
+           src=\${src##*/}
+           {
 diff --git a/core/embed/projects/prodtest/build.rs b/core/embed/projects/prodtest/build.rs
 index 0a3c88c..4674308 100644
 --- a/core/embed/projects/prodtest/build.rs
