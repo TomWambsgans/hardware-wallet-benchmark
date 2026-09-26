@@ -45,7 +45,8 @@ In short:
 
 | | BLAKE2s | SHA-256 |
 |---|---|---|
-| compression function | 1,861 cycles, 11.6 µs | 2,692 cycles, 16.8 µs |
+| hashes/s, compression loop | **86.0K/s** (1,861 cycles, 11.6 µs) | **59.4K/s** (2,692 cycles, 16.8 µs) |
+| hashes/s in SPHINCS+ keygen / signing | 81.5K/s / 80.3K/s | 57.1K/s / 56.5K/s |
 | keygen (1.43M compressions) | 17.5 s | 25.0 s |
 | sign, mean (min–max) | 2.47 s (2.25–2.84) | 3.70 s (3.10–4.17) |
 
