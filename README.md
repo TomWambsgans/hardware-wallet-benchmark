@@ -3,10 +3,11 @@
 How many BLAKE2s and SHA-256 compressions per second two hardware wallets sustain, with
 hand-written Thumb-2 compression functions (`ledger-app/src/crypto`, the same code on both).
 
-A tight compression loop can overstate what a real workload gets, so each rate is also measured
-inside one: leanVM's SPHINCS+ variant (WOTS+C, FORS+C; 4924-byte signatures), whose key
-generation and signing are nearly all hashing. The device's outputs match the test vectors
-byte for byte, so the counted hashes are the real ones.
+A tight loop can flatter a hash function, so we also measure throughput in a real workload:
+key generation and signing in leanVM's SPHINCS+ variant ([spec](https://github.com/leanEthereum/leanMultisig/blob/5fe073bef6fb1cae20b3a2394c69f60489c2eacf/doc/sphincs/main.tex);
+WOTS+C and FORS+C, 4924-byte signatures), which spend nearly all their time hashing. The keys
+and signatures the devices produce match the test vectors byte for byte, so the work being
+counted is real.
 
 ## Hashes per second
 
@@ -50,7 +51,8 @@ firmware 1.6.1; Safe 3 running Trezor's production-test firmware with our comman
 
 ## The scheme
 
-leanVM `doc/sphincs/main.tex` (reference: leanVM `crates/sphincs`): n = 16 bytes, WOTS+C with
+leanVM's [`doc/sphincs/main.tex`](https://github.com/leanEthereum/leanMultisig/blob/5fe073bef6fb1cae20b3a2394c69f60489c2eacf/doc/sphincs/main.tex), with its reference implementation
+[`crates/sphincs`](https://github.com/leanEthereum/leanMultisig/tree/5fe073bef6fb1cae20b3a2394c69f60489c2eacf/crates/sphincs), both at leanMultisig commit `5fe073b`: n = 16 bytes, WOTS+C with
 w = 3, v = 42, T = 191; d = 3 layers of heights (12, 7, 7); FORS+C with a = 10, k = 15. Every
 hash is Th(P, tw, M) = H(tw ‖ P ‖ M)[:16] (the message digest keeps 22 bytes), with H either
 
