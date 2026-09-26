@@ -1,30 +1,22 @@
 #!/usr/bin/env bash
-# Build the Ledger app for the Nano S Plus inside Ledger's app-builder image.
-#
-#   scripts/build.sh                 # crypto at -O3 (default)
-#   scripts/build.sh CRYPTO_OPT=z    # crypto at the SDK's default -Oz
-#
-# The SDK branch must match the device firmware's API level (see README.md).
-# Output: ledger-app/build/nanos2/bin/app.elf (+ app.apdu, app.hex).
+# Build the Ledger app for the Nano S Plus in Ledger's app-builder image, against the
+# secure SDK for firmware 1.6.x (API level 26). Both are pinned to what produced
+# results/nanosp.json. Output: ledger-app/build/nanos2/bin/app.{elf,apdu}
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-IMAGE="${IMAGE:-ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest}"
-SDK_BRANCH="${SDK_BRANCH:-API_LEVEL_26}"
-SDK_DIR="$ROOT/.sdk/$SDK_BRANCH"
+IMAGE="ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite@sha256:442b6fa0407e243333a1be723f6d817c775ac78db198b56f63b833acf0930160"
+SDK_COMMIT="d56084c98523794c7920ca5c5b55a703381ba680"  # ledger-secure-sdk, branch API_LEVEL_26
+SDK_DIR="$ROOT/.sdk"
 
-if [ ! -d "$SDK_DIR" ]; then
-    git clone --depth 1 -b "$SDK_BRANCH" https://github.com/LedgerHQ/ledger-secure-sdk.git "$SDK_DIR"
+if [ "$(git -C "$SDK_DIR" rev-parse HEAD 2>/dev/null)" != "$SDK_COMMIT" ]; then
+    rm -rf "$SDK_DIR"
+    git init -q "$SDK_DIR"
+    git -C "$SDK_DIR" fetch -q --depth 1 https://github.com/LedgerHQ/ledger-secure-sdk.git "$SDK_COMMIT"
+    git -C "$SDK_DIR" checkout -q FETCH_HEAD
 fi
-git -C "$SDK_DIR" log -1 --format='SDK %H (%cd)'
 
-# The SDK writes the generated home-screen icon here.
-mkdir -p "$ROOT/ledger-app/glyphs"
-
-docker run --rm -u "$(id -u):$(id -g)" \
-    -v "$ROOT:/work" -w /work/ledger-app \
-    -e BOLOS_SDK="/work/.sdk/$SDK_BRANCH" -e TARGET=nanos2 \
-    "$IMAGE" \
-    bash -c "make clean >/dev/null && make -j VERBOSE=${VERBOSE:-} $*"
-
-ls -la "$ROOT/ledger-app/build/nanos2/bin/"
+mkdir -p "$ROOT/ledger-app/glyphs"  # the SDK writes the home-screen icon there
+docker run --rm -u "$(id -u):$(id -g)" -v "$ROOT:/work" -w /work/ledger-app \
+    -e BOLOS_SDK=/work/.sdk -e TARGET=nanos2 "$IMAGE" \
+    bash -c "set -o pipefail; make clean >/dev/null 2>&1 && make -j 2>&1 | grep -v 'No names found'"

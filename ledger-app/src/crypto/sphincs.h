@@ -1,8 +1,8 @@
 #pragma once
 
-// leanVM's SPHINCS+ variant: BLAKE2s, WOTS+C and FORS+C, 2^24 signatures per key.
+// leanVM's SPHINCS+ variant: WOTS+C and FORS+C, 2^24 signatures per key.
 // Spec: leanVM doc/sphincs/main.tex; reference: leanVM crates/sphincs.
-//   Th(P, tw, M) = BLAKE2s-256(tw || P || M)[..16]
+//   Th(P, tw, M) = H(tw || P || M)[..16], H = BLAKE2s-256 or raw SHA-256 (hash.h, g_hash)
 //   WOTS+C: w = 3 (chains of 8), v = 42 chains, target sum T = 191
 //   hypertree: d = 3 layers numbered from the top, heights (12, 7, 7)
 //   FORS+C: a = 10, k = 15 digest indices, k - 1 = 14 trees
@@ -46,18 +46,9 @@ typedef struct {
     uint32_t counters[SPX_D];  // least admissible WOTS encoding counter per layer
 } spx_sign_stats_t;
 
-// Called between units of work so the device can service its event loop
-// during a long computation. Defined by the app.
-void spx_yield(void);
-
 // Gen on a 32-byte master seed: P, then layer 0's tree (root and cache).
 void spx_keygen(spx_key_t *key, const uint8_t seed[32]);
 
 // Sign a 32-byte message into sig (SPX_SIG_BYTES). Returns false if the final
 // root differs from key->root (an internal consistency check).
 bool spx_sign(const spx_key_t *key, const uint8_t msg[32], uint8_t *sig, spx_sign_stats_t *stats);
-
-// Microbenchmarks: count chain steps (one compression each), or count WOTS
-// public leaves (42 PRF + 294 chain steps + an 11-block leaf hash each).
-void spx_bench_chain(const spx_key_t *key, uint32_t count, val_t out);
-void spx_bench_ots_leaf(const spx_key_t *key, uint32_t count, val_t out);

@@ -1,0 +1,14 @@
+# Regenerates vectors/blake2s.json from leanVM's reference implementation
+# (crates/sphincs; the vectors come from leanVM 5fe073b), expected at ../../../../leanVM:
+#
+#   cd tests/leanvm-vectors && cargo run --release > ../../vectors/blake2s.json
+[package]
+name = "leanvm-vectors"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+sphincs = { path = "../../../../leanVM/crates/sphincs" }

@@ -1,0 +1,79 @@
+{
+  "date": "2026-09-26T17:15:14",
+  "device": "Ledger Nano S Plus",
+  "app_version": "1.0.0",
+  "repo_commit": "7d776b3",
+  "usb_roundtrip_ms": 3.9973329985514283,
+  "hashes": {
+    "blake2s": {
+      "compression_us": 29.80493775976356,
+      "keygen_s": 42.92057712498354,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "message": "vector",
+          "s": 5.764931249956135,
+          "compressions": 189076
+        },
+        {
+          "message": "vector",
+          "s": 5.5840414999984205,
+          "compressions": 183843
+        },
+        {
+          "message": "0da0a48e80caa1e9824be5cb41a7afb7c0b7a6ca5edb2db3d55f9e6832a2e475",
+          "s": 6.823035832960159,
+          "compressions": 225688
+        },
+        {
+          "message": "5b8aefc84e203ae871af0a0726861235282aa38ee98129d7d86813b5c2ee0c59",
+          "s": 7.569715251040179,
+          "compressions": 250506
+        },
+        {
+          "message": "b763512cabbfd84988c8acfd85838740d5620fbe985dac9de77077694438b70f",
+          "s": 5.574784042022657,
+          "compressions": 184007
+        }
+      ],
+      "sign_s_mean": 6.26330157519551,
+      "sign_s_min": 5.574784042022657,
+      "sign_s_max": 7.569715251040179
+    },
+    "sha256": {
+      "compression_us": 40.89025025314186,
+      "keygen_s": 59.69468008301919,
+      "keygen_compressions": 1425408,
+      "signatures": [
+        {
+          "message": "vector",
+          "s": 9.945887667010538,
+          "compressions": 236371
+        },
+        {
+          "message": "vector",
+          "s": 9.151037584000733,
+          "compressions": 218255
+        },
+        {
+          "message": "644e3ecdb218645a1ecd88d123fd8eb6bca9cf7a68ad77719b643f030e21cce6",
+          "s": 10.547031167021487,
+          "compressions": 250602
+        },
+        {
+          "message": "883148e3d51153378a519892e0690ffee388ab9b9bfc05d4d34eba61cd27394b",
+          "s": 7.386883208993822,
+          "compressions": 175715
+        },
+        {
+          "message": "768ff7038d7923afeb373c5bc37781509dd57e4e1351301217c28302c7bd7691",
+          "s": 7.403247291978914,
+          "compressions": 174727
+        }
+      ],
+      "sign_s_mean": 8.886817383801098,
+      "sign_s_min": 7.386883208993822,
+      "sign_s_max": 10.547031167021487
+    }
+  }
+}

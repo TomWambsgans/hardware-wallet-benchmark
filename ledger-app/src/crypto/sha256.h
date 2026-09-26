@@ -1,17 +1,19 @@
 #pragma once
 
-// SHA-256 compression function (FIPS 180-4) on 32-bit words: h the 8-word
-// chaining value (any IV), m the 16 message words, i.e. the big-endian decoding
-// of a 64-byte block. No padding, no length: one compression per call.
+// SHA-256 compression function (FIPS 180-4). A block is 64 bytes, read big-endian as
+// SHA-256 specifies, passed as a 16-word array (the bytes' memory); a state is 8 words.
 
 #include <stdint.h>
 
-void sha256_compress_c(uint32_t h[8], const uint32_t m[16]);
-#if defined(__thumb2__)
-void sha256_compress_asm(uint32_t h[8], const uint32_t m[16]);   // sha256_thumb2.S
-void sha256_compress_asm2(uint32_t h[8], const uint32_t m[16]);  // sha256_thumb2.S
-// v3 reads the K table (+ 0 sentinel): sha256_compress_asm3 from flash,
-// sha256_compress_asm3r from a RAM copy (crypto_tables_init() in blake2s.c).
-void sha256_compress_asm3(uint32_t h[8], const uint32_t m[16]);
-void sha256_compress_asm3r(uint32_t h[8], const uint32_t m[16]);
-#endif
+// The standard SHA-256 initial state.
+void sha256_init_state(uint32_t h[8]);
+
+// One compression of the 64-byte block.
+void sha256_compress(uint32_t h[8], const uint32_t block[16]);
+
+// First 16 bytes (big-endian) of compress(IV, block): the SHA-256 scheme's hash of an
+// input of at most 64 bytes, zero-padded to the block.
+void sha256_oneblock16(uint32_t out[4], const uint32_t block[16]);
+
+// Copies the assembly's K table to RAM (loads from flash are slower). Device only; a no-op elsewhere.
+void sha256_setup(void);

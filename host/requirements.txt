@@ -1,3 +1,4 @@
-hidapi
-pycryptodome
-ledgerblue
+hidapi       # USB transport
+ledgerblue   # app installation (scripts/load.sh)
+unicorn      # tests/emu
+pyelftools   # tests/emu

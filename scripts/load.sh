@@ -1,31 +1,30 @@
 #!/usr/bin/env bash
-# Sideload the built app onto a USB-connected, unlocked Nano S Plus. A running
-# app is closed first (the install fails silently otherwise). The device asks to
-# allow the (unsigned) manager, then shows the app's identifier: accept both. The
-# script's first APDU deletes any app with the same name, so re-running replaces
-# the previous build. Then the app is opened.
+# Install the built app on a USB-connected, unlocked Nano S Plus, then open it.
+# The device asks to allow the unsigned manager, then to confirm the install: accept both.
+# A running app is closed first; an earlier PQ Bench is replaced.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/ledger-app/build/nanos2/bin"
-PY="${PY:-$ROOT/.venv/bin/python}"
+PY="$ROOT/.venv/bin/python"
 
 cd "$ROOT/host"
 "$PY" - <<'PYEOF'
 import time
 from ledger_hid import Ledger
 d = Ledger()
-name, _ = d.running_app()
-if name != "BOLOS":
+if d.running_app()[0] != "BOLOS":
     d.quit_app()
     d.close()
     time.sleep(2)
     d = Ledger()
-    name, _ = d.running_app()
+v = d.device_version()
 d.close()
-assert name == "BOLOS", f"still running {name}"
+print(f"device: target {v['target_id']}, firmware {v['se_version']}")
+if v["target_id"] != "0x33100004" or not v["se_version"].startswith("1.6."):
+    raise SystemExit("expected a Nano S Plus (0x33100004) on firmware 1.6.x, the SDK this repo builds with")
 PYEOF
-"$PY" -m ledgerblue.runScript --scp --fileName "$BIN/app.apdu" --elfFile "$BIN/app.elf"
+"$PY" -m ledgerblue.runScript --scp --fileName "$BIN/app.apdu" --elfFile "$BIN/app.elf" 2>&1 | grep -v "b'04"
 "$PY" - <<'PYEOF'
 import time
 from ledger_hid import ApduError, Ledger
@@ -36,10 +35,13 @@ for _ in range(10):
     time.sleep(1.5)
     try:
         d = Ledger()
-        print("running:", d.running_app())
+        name = d.running_app()[0]
         d.close()
-        break
-    except ApduError as e:
-        print("waiting for the app:", e)
+        if name == "PQ Bench":
+            print("PQ Bench is open")
+            break
+    except ApduError:
         d.close()
+else:
+    raise SystemExit("could not open PQ Bench: open it on the device")
 PYEOF

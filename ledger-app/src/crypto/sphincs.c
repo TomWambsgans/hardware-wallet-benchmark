@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "blake2s.h"
+#include "hash.h"
 #include "sphincs.h"
 
 // Tweak types (spec, Appendix A).
@@ -57,7 +57,7 @@ static void prf(val_t out, uint32_t type, uint32_t lay, uint32_t tau, uint32_t p
     uint32_t blk[16];
     block_head(blk, type, lay, tau, p, j);
     memcpy(blk + 8, K_->master, 32);
-    b2s_oneblock(out, 4, blk, 64);
+    th_oneblock(out, blk, 64);
 }
 
 // Th(P, tw, left || right): a Merkle node, 64 bytes.
@@ -67,7 +67,7 @@ static void node(val_t out, uint32_t type, uint32_t lay, uint32_t tau, uint32_t 
     block_head(blk, type, lay, tau, level, j);
     copy4(blk + 8, left);
     copy4(blk + 12, right);
-    b2s_oneblock(out, 4, blk, 64);
+    th_oneblock(out, blk, 64);
 }
 
 // ---------------------------------------------------------------------------
@@ -82,28 +82,28 @@ static void chain(val_t v, uint32_t lay, uint32_t tau, uint32_t e, uint32_t i, u
     for (uint32_t s = 1; s <= steps; s++) {
         blk[1] = SPX_CHAIN_LEN * i + start + s - 1;
         copy4(blk + 8, v);
-        b2s_oneblock(v, 4, blk, 48);
+        th_oneblock(v, blk, 48);
     }
 }
 
 // The Merkle leaf of a WOTS key: its 42 chain tips hashed in order (704 bytes,
 // 11 compressions), streamed as the tips are produced.
 static void ots_public_leaf(val_t out, uint32_t lay, uint32_t tau, uint32_t e) {
-    b2s_ctx_t c;
+    hctx_t c;
     uint32_t  head[8];
     uint32_t  d[8];
     val_t     v;
 
-    b2s_init(&c);
+    h_init(&c);
     tweak(head, TW_LEAF, lay, tau, 0, e);
     copy4(head + 4, K_->pp);
-    b2s_update_words(&c, head, 8);
+    h_update_words(&c, head, 8);
     for (uint32_t i = 0; i < SPX_V; i++) {
         prf(v, TW_PRF, lay, tau, i, e);
         chain(v, lay, tau, e, i, 0, SPX_CHAIN_LEN - 1);
-        b2s_update_words(&c, v, 4);
+        h_update_words(&c, v, 4);
     }
-    b2s_final(&c, d);
+    h_final(&c, d);
     copy4(out, d);
 }
 
@@ -153,12 +153,9 @@ static uint32_t ots_sign(uint8_t *out, uint32_t lay, uint32_t tau, uint32_t e, c
     blk[13] = blk[14] = blk[15] = 0;
     for (c = 0;; c++) {
         blk[12] = c;
-        b2s_oneblock(d, 4, blk, 52);
+        th_oneblock(d, blk, 52);
         if (codeword(x, d)) {
             break;
-        }
-        if ((c & 255) == 255) {
-            spx_yield();
         }
     }
     memcpy(out, &c, 4);
@@ -228,7 +225,6 @@ typedef struct {
 static void ots_leaf_fn(val_t out, uint32_t e, const void *arg) {
     const ots_tree_t *t = arg;
     ots_public_leaf(out, t->lay, t->tau, e);
-    spx_yield();
 }
 
 typedef struct {
@@ -247,10 +243,7 @@ static void fts_leaf_fn(val_t out, uint32_t j, const void *arg) {
     block_head(blk, TW_FTS_LEAF, t->kappa, t->idx, 0, j);
     copy4(blk + 8, s);
     blk[12] = blk[13] = blk[14] = blk[15] = 0;
-    b2s_oneblock(out, 4, blk, 48);
-    if ((j & 63) == 63) {
-        spx_yield();
-    }
+    th_oneblock(out, blk, 48);
 }
 
 // Layer 0's path at e and its root, from the cache: rebuild the 2^6-leaf
@@ -284,7 +277,7 @@ void spx_keygen(spx_key_t *key, const uint8_t seed[32]) {
     tweak(blk, TW_PARAMETER, 0, 0, 0, 0);
     blk[4] = blk[5] = blk[6] = blk[7] = 0;
     memcpy(blk + 8, key->master, 32);
-    b2s_oneblock(key->pp, 4, blk, 64);
+    th_oneblock(key->pp, blk, 64);
 
     K_ = key;
     const ots_tree_t  t = {0, 0};
@@ -305,37 +298,34 @@ bool spx_sign(const spx_key_t *key, const uint8_t msg[32], uint8_t *sig, spx_sig
     uint32_t  dig[8];
     val_t     rho;
     uint32_t  idx, u[SPX_K];
-    b2s_ctx_t c;
+    hctx_t c;
 
     K_ = key;
     memcpy(m, msg, 32);
 
     // 1. Randomizers rho_a = Th(P, tw_rnd(a), S || m) until the digest's last
-    //    index is zero. Both hashes are 96 bytes (two compressions).
+    //    index is zero. Both inputs are 96 bytes (two compressions).
     for (uint32_t trial = 0;; trial++) {
-        b2s_init(&c);
+        h_init(&c);
         tweak(head, TW_RANDOMIZER, 0, 0, trial, 0);
         copy4(head + 4, key->pp);
-        b2s_update_words(&c, head, 8);
-        b2s_update_words(&c, key->master, 8);
-        b2s_update_words(&c, m, 8);
-        b2s_final(&c, dig);
+        h_update_words(&c, head, 8);
+        h_update_words(&c, key->master, 8);
+        h_update_words(&c, m, 8);
+        h_final(&c, dig);
         copy4(rho, dig);
 
-        b2s_init(&c);
+        h_init(&c);
         tweak(head, TW_MSG, 0, 0, 0, 0);
         copy4(head + 4, key->pp);
-        b2s_update_words(&c, head, 8);
-        b2s_update_words(&c, rho, 4);
-        b2s_update_words(&c, key->root, 4);
-        b2s_update_words(&c, m, 8);
-        b2s_final(&c, dig);
+        h_update_words(&c, head, 8);
+        h_update_words(&c, rho, 4);
+        h_update_words(&c, key->root, 4);
+        h_update_words(&c, m, 8);
+        h_final(&c, dig);
         if (digest_bits(dig, SPX_H + (SPX_K - 1) * SPX_A, SPX_A) == 0) {
             stats->digest_trials = trial + 1;
             break;
-        }
-        if ((trial & 63) == 63) {
-            spx_yield();
         }
     }
     idx = digest_bits(dig, 0, SPX_H);
@@ -348,10 +338,10 @@ bool spx_sign(const spx_key_t *key, const uint8_t msg[32], uint8_t *sig, spx_sig
     val_t message;
     {
         uint8_t *out = sig + 16;
-        b2s_init(&c);
+        h_init(&c);
         tweak(head, TW_FTS_ROOTS, 0, idx, 0, 0);
         copy4(head + 4, key->pp);
-        b2s_update_words(&c, head, 8);
+        h_update_words(&c, head, 8);
         for (uint32_t kappa = 0; kappa < SPX_FTS_TREES; kappa++) {
             val_t             secret, root, path[SPX_A];
             const fts_tree_t  t = {kappa, idx, u[kappa], secret};
@@ -360,9 +350,9 @@ bool spx_sign(const spx_key_t *key, const uint8_t msg[32], uint8_t *sig, spx_sig
             memcpy(out, secret, 16);
             memcpy(out + 16, path, sizeof(path));
             out += FTS_OPENING_BYTES;
-            b2s_update_words(&c, root, 4);
+            h_update_words(&c, root, 4);
         }
-        b2s_final(&c, dig);
+        h_final(&c, dig);
         copy4(message, dig);
     }
 
@@ -393,25 +383,4 @@ bool spx_sign(const spx_key_t *key, const uint8_t msg[32], uint8_t *sig, spx_sig
         memcpy(out + LAYER_OTS_BYTES, path, 16 * HEIGHTS[lay]);
     }
     return memcmp(message, key->root, 16) == 0;
-}
-
-void spx_bench_chain(const spx_key_t *key, uint32_t count, val_t out) {
-    K_ = key;
-    memset(out, 0, 16);
-    for (uint32_t done = 0; done < count;) {
-        uint32_t n = count - done > 7 ? 7 : count - done;
-        chain(out, 0, 0, 0, 0, 0, n);
-        done += n;
-        if ((done & 1023) < 7) {
-            spx_yield();
-        }
-    }
-}
-
-void spx_bench_ots_leaf(const spx_key_t *key, uint32_t count, val_t out) {
-    K_ = key;
-    for (uint32_t i = 0; i < count; i++) {
-        ots_public_leaf(out, 2, 0, i);
-        spx_yield();
-    }
 }
