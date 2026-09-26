@@ -13,3 +13,6 @@ tests/leanvm-vectors/target/
 # Python
 .venv/
 __pycache__/
+
+# Trezor firmware source, fetched by trezor/build.sh
+trezor/trezor-firmware/

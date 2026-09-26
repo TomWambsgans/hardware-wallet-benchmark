@@ -1,0 +1,32 @@
+diff --git a/core/embed/projects/prodtest/build.rs b/core/embed/projects/prodtest/build.rs
+index 0a3c88c..4674308 100644
+--- a/core/embed/projects/prodtest/build.rs
++++ b/core/embed/projects/prodtest/build.rs
+@@ -44,6 +44,7 @@ fn main() -> Result<()> {
+                 "prodtest_tamper.c",
+                 "prodtest_sbu.c",
+                 "prodtest_secure_channel.c",
++                "prodtest_sphincs.c",
+                 "prodtest_syslog.c",
+                 "prodtest_telemetry.c",
+                 "prodtest_touch.c",
+@@ -69,6 +70,19 @@ fn main() -> Result<()> {
+                     "prodtest_wpc.c",
+                 ],
+             );
++            // SPHINCS+ benchmark (hardware-wallet-benchmark): portable C scheme,
++            // Thumb-2 BLAKE2s and SHA-256 compressions.
++            lib.add_sources_in_dir(
++                "cmd/sphincs",
++                [
++                    "sphincs.c",
++                    "hash.c",
++                    "blake2s.c",
++                    "sha256.c",
++                    "blake2s_thumb2.S",
++                    "sha256_thumb2.S",
++                ],
++            );
+ 
+             lib.embed_binary(
+                 xbuild::vendor_header_path("../../models", "prodtest")?,
