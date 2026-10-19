@@ -1,10 +1,11 @@
 """Benchmark the PQ Bench app on a Nano S Plus (the app must be open: scripts/load.sh does it).
 
-    .venv/bin/python host/pqbench.py                 # both hashes -> results/nanosp.json
-    .venv/bin/python host/pqbench.py --hash sha256 --sigs 1
+    .venv/bin/python host/pqbench.py                 # every hash -> results/nanosp.json
+    .venv/bin/python host/pqbench.py --hash keccak256 --sigs 1
 
 For each hash:
-  1. compression throughput (BENCH, minus the USB round trip of a no-op APDU);
+  1. compression throughput (BENCH, minus the USB round trip of a no-op APDU); for Keccak-256
+     a compression is a Keccak-f[1600] permutation, and the OS's own Keccak-256 is timed too;
   2. keygen on the seed of vectors/<hash>.json, public key checked against it;
   3. the vector messages signed, signatures compared byte for byte;
   4. --sigs random messages signed, each verified with the Python reference.
@@ -23,11 +24,12 @@ import subprocess
 import time
 
 import sphincs_ref
+from Crypto.Hash import keccak
 from ledger_hid import Ledger
 
 CLA = 0xE0
-INS_INFO, INS_KEYGEN, INS_SIGN, INS_GET_SIG, INS_BENCH, INS_NOP = range(1, 7)
-HASHES = {"blake2s": 0, "sha256": 1}
+INS_INFO, INS_KEYGEN, INS_SIGN, INS_GET_SIG, INS_BENCH, INS_NOP, INS_BENCH_OS = range(1, 8)
+HASHES = {"blake2s": 0, "sha256": 1, "keccak256": 2}
 SIG_CHUNK = 240
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
@@ -54,6 +56,16 @@ class App:
         _, dt = self.timed(INS_BENCH, hash_id, count.to_bytes(4, "big"))
         return (dt - self.rtt) / count * 1e6
 
+    def os_keccak256_us(self, count: int = 1000) -> float:
+        """The OS's Keccak-256 of 64 bytes (cx_keccak_init, cx_sha3_update, cx_sha3_final),
+        its last digest checked against pycryptodome."""
+        digest, dt = self.timed(INS_BENCH_OS, 0, count.to_bytes(4, "big"))
+        expect = bytes(32)
+        for _ in range(count):
+            expect = keccak.new(digest_bits=256, data=expect[:1] + bytes(63)).digest()
+        assert digest == expect, "the OS's Keccak-256 differs from pycryptodome"
+        return (dt - self.rtt) / count * 1e6
+
     def keygen(self, hash_id: int, seed: bytes):
         out, dt = self.timed(INS_KEYGEN, hash_id, seed)
         return out[:16], out[16:32], be32(out, 8), dt - self.rtt
@@ -68,8 +80,11 @@ def run(app: App, hash_name: str, n_random: int) -> dict:
     hid = HASHES[hash_name]
     ref = sphincs_ref.Sphincs(hash_name)
     vectors = sphincs_ref.load_vectors(hash_name)
-    r = {"compression_us": app.compression_us(hid)}
+    r = {"compression_us": app.compression_us(hid, 1000 if hash_name == "keccak256" else 4000)}
     print(f"{hash_name}: {r['compression_us']:.1f} us per compression ({1e6 / r['compression_us']:,.0f}/s)")
+    if hash_name == "keccak256":
+        r["os_keccak256_us"] = app.os_keccak256_us()
+        print(f"  the OS's Keccak-256 (cx): {r['os_keccak256_us']:.1f} us per 64-byte hash")
 
     seed = vectors[0]["seed"]
     pp, root, comps, dt = app.keygen(hid, seed)
@@ -96,7 +111,7 @@ def run(app: App, hash_name: str, n_random: int) -> dict:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--hash", choices=[*HASHES, "both"], default="both")
+    p.add_argument("--hash", choices=[*HASHES, "all"], default="all")
     p.add_argument("--sigs", type=int, default=3, help="random-message signatures per hash (default 3)")
     p.add_argument("--out", default="results/nanosp.json")
     args = p.parse_args()
@@ -106,13 +121,13 @@ def main():
                             text=True).stdout.strip()
     res = {"date": datetime.datetime.now().isoformat(timespec="seconds"), "device": "Ledger Nano S Plus",
            "app_version": app.version, "repo_commit": commit, "usb_roundtrip_ms": app.rtt * 1e3, "hashes": {}}
-    for h in HASHES if args.hash == "both" else [args.hash]:
+    for h in HASHES if args.hash == "all" else [args.hash]:
         res["hashes"][h] = run(app, h, args.sigs)
     app.dev.close()
 
-    print(f"\n{'hash':8s} {'compression':>12s} {'per second':>11s} {'keygen':>8s} {'sign (mean, min-max)':>24s}")
+    print(f"\n{'hash':10s} {'compression':>12s} {'per second':>11s} {'keygen':>8s} {'sign (mean, min-max)':>24s}")
     for h, r in res["hashes"].items():
-        print(f"{h:8s} {r['compression_us']:9.1f} us {1e6 / r['compression_us']:11,.0f} {r['keygen_s']:6.1f} s "
+        print(f"{h:10s} {r['compression_us']:9.1f} us {1e6 / r['compression_us']:11,.0f} {r['keygen_s']:6.1f} s "
               f"{r['sign_s_mean']:8.2f} s ({r['sign_s_min']:.2f}-{r['sign_s_max']:.2f})")
     out = REPO / args.out
     out.parent.mkdir(exist_ok=True)

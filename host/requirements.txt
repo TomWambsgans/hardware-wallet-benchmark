@@ -1,4 +1,5 @@
 hidapi       # USB transport
+pycryptodome # Keccak-256 (host/sphincs_ref.py)
 ledgerblue   # app installation (scripts/load.sh)
 pyserial     # Trezor prodtest serial port (trezor/bench.py)
 trezor       # trezorctl: Trezor bootloader unlock and firmware install

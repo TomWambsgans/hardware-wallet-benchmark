@@ -1,4 +1,4 @@
-"""The device's scheme code, built natively (portable C), against vectors/ (both hashes).
+"""The device's scheme code, built natively (portable C), against vectors/ (every hash).
 
     python3 tests/native/check.py
 """
@@ -12,9 +12,9 @@ SRC = ROOT / "ledger-app" / "src" / "crypto"
 BIN = ROOT / "tests" / "native" / "spx_native"
 
 subprocess.run(["cc", "-O2", "-Wall", "-Wextra", "-I", str(SRC), str(ROOT / "tests/native/spx_native.c"),
-                *(str(SRC / f) for f in ("hash.c", "blake2s.c", "sha256.c", "sphincs.c")), "-o", str(BIN)],
+                *(str(SRC / f) for f in ("hash.c", "blake2s.c", "sha256.c", "keccak.c", "sphincs.c")), "-o", str(BIN)],
                check=True)
-for hash_name in ("blake2s", "sha256"):
+for hash_name in ("blake2s", "sha256", "keccak256"):
     vectors = json.loads((ROOT / "vectors" / f"{hash_name}.json").read_text())["vectors"]
     for v in vectors:
         pp, root, sig = subprocess.run([str(BIN), hash_name, v["seed"], v["message"]], check=True,

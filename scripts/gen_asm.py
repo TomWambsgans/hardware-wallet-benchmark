@@ -35,6 +35,7 @@ SHA-256 (sha256_thumb2.S):
 """
 
 import pathlib
+import random
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "ledger-app" / "src" / "crypto"
@@ -368,7 +369,312 @@ def sha256_file() -> str:
     return "\n".join(out + gen_sha256(False) + [""] + gen_sha256(True)) + "\n"
 
 
+# ---------------------------------------------------------------------------
+# Keccak-f[1600]
+
+KECCAK_RHO = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14]
+
+
+def keccak_rc64() -> list[int]:
+    """The 24 round constants (the Keccak reference's LFSR)."""
+    out, lfsr = [], 1
+    for _ in range(24):
+        rc = 0
+        for j in range(7):
+            if lfsr & 1:
+                rc |= 1 << ((1 << j) - 1)
+            lfsr = ((lfsr << 1) ^ 0x71) & 0xFF if lfsr & 0x80 else lfsr << 1
+        out.append(rc)
+    return out
+
+
+def interleave(lane: int) -> tuple[int, int]:
+    """A 64-bit lane as (even bits, odd bits), 32 each."""
+    even = sum(((lane >> (2 * i)) & 1) << i for i in range(32))
+    odd = sum(((lane >> (2 * i + 1)) & 1) << i for i in range(32))
+    return even, odd
+
+
+def keccak_source(X: int, Y: int, h: int):
+    """Output word (X, Y, half h) of rho-pi: (source lane, source half, left rotation)."""
+    x, y = (3 * Y + X) % 5, X
+    i = x + 5 * y
+    r = KECCAK_RHO[i]
+    if r % 2 == 0:
+        return i, h, r // 2
+    return (i, 1, (r + 1) // 2) if h == 0 else (i, 0, (r - 1) // 2)
+
+
+# The order of the 10 row halves (Y, h) in a round: the one that reloads the fewest D
+# words into the 6 registers that hold them (exhaustive search; (0, 0) before (0, 1) for
+# the round constant pointer).
+KECCAK_ROW_ORDER = [(1, 1), (2, 0), (0, 0), (3, 1), (4, 0), (0, 1), (2, 1), (3, 0), (1, 0), (4, 1)]
+LOW = {f"r{i}" for i in range(8)}
+
+
+def alu(op: str, d: str, n: str, m: str) -> str:
+    """Two-operand 16-bit form (flag-setting) when it exists, else the 32-bit form."""
+    if d == n and {d, m} <= LOW:
+        return f"    {op}s {d}, {m}"
+    return f"    {op} {d}, {n}, {m}"
+
+
+class Op:
+    def __init__(self, text, defs=(), uses=(), mem=None, load=False):
+        self.text, self.defs, self.uses, self.mem, self.load = text, set(defs), set(uses), mem, load
+
+
+def schedule(ops: list[Op]) -> list[str]:
+    """List scheduling in program order, except that an instruction using the register a
+    load just wrote waits one slot when anything else is ready (a load-use stall)."""
+    deps = []
+    for i, a in enumerate(ops):
+        d = set()
+        for j in range(i):
+            b = ops[j]
+            if (a.uses & b.defs) or (a.defs & b.uses) or (a.defs & b.defs) or (
+                    a.mem == b.mem == "sp" and not (a.load and b.load)):
+                d.add(j)
+        deps.append(d)
+    done, out, last = set(), [], None
+    while len(done) < len(ops):
+        ready = [i for i in range(len(ops)) if i not in done and deps[i] <= done]
+        pick = next((i for i in ready if not (last is not None and ops[last].load and ops[i].uses & ops[last].defs)),
+                    ready[0])
+        done.add(pick)
+        out.append(ops[pick].text)
+        last = pick
+    return out
+
+
+def gen_keccakf() -> list[str]:
+    RS, RD = "r0", "r1"  # this round's source and destination states (swapped each round)
+    # Frame: D table (10 words, word 2x + h) at 0, round-constant pointer at 40, its end at
+    # 44, the second state at 48. 36 + 252 keeps sp 8-aligned.
+    DT, RCP, RCEND, BUF, FRAME = 0, 40, 44, 48, 252
+    name = "keccakf1600_asm"
+    out = function(name)
+    e = out.append
+    e("    push {r4-r11, lr}")
+    e(f"    sub sp, sp, #{FRAME}")
+    e(f"    str r1, [sp, #{RCP}]")
+    e("    add r2, r1, #192")
+    e(f"    str r2, [sp, #{RCEND}]")
+    e(f"    add {RD}, sp, #{BUF}")
+    e("1:")
+
+    # Theta: column parities C (word 2x + h) from the 5 rows: row 0 with one ldm, the
+    # others through two scratch registers, each load used two instructions later.
+    C = ["r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "lr"]
+    e(f"    ldm {RS}, {{r4-r12, lr}}")
+    words = [(y, w) for y in range(1, 5) for w in range(10)]
+    for k, (y, w) in enumerate(words):
+        e(f"    ldr {('r2', 'r3')[k % 2]}, [{RS}, #{4 * (10 * y + w)}]")
+        if k:
+            e(alu("eor", C[words[k - 1][1]], C[words[k - 1][1]], ("r2", "r3")[(k - 1) % 2]))
+    e(alu("eor", C[words[-1][1]], C[words[-1][1]], ("r2", "r3")[(len(words) - 1) % 2]))
+
+    # The D accesses of the rows, in order, and which D words stay in registers (Belady:
+    # the first 6 distinct, then evict the one needed farthest ahead) or go to the table.
+    seq = []
+    for Y, h in KECCAK_ROW_ORDER:
+        for X in range(5):
+            i, sh, _ = keccak_source(X, Y, h)
+            seq.append(2 * (i % 5) + sh)
+    initial = list(dict.fromkeys(seq))[:6]
+    cache, plan, tabled = list(initial), [], set()
+    for k, item in enumerate(seq):
+        if item in cache:
+            plan.append(None)
+            continue
+        nxt = {c: next((j for j in range(k + 1, len(seq)) if seq[j] == c), len(seq)) for c in cache}
+        victim = max(cache, key=nxt.get)
+        cache[cache.index(victim)] = item
+        plan.append(victim)
+        tabled.add(item)
+
+    # D[x].e = C[x-1].e ^ rotl(C[x+1].o, 1), D[x].o = C[x-1].o ^ C[x+1].e; each C word is
+    # used twice. Each D goes into a dying operand's register or a free one: the D words
+    # that stay go to high registers, so that the rows' registers are the low ones (16-bit
+    # encodings).
+    def operands(item):
+        x, h = divmod(item, 2)
+        return (2 * ((x + 4) % 5), 2 * ((x + 1) % 5) + 1) if h == 0 else (2 * ((x + 4) % 5) + 1, 2 * ((x + 1) % 5))
+
+    def allocate(order):
+        """[(item, dest, operand registers)] and the final D registers, or None if a
+        D that stays would land in a low register."""
+        reg_of = {w: C[w] for w in range(10)}  # C word -> register
+        uses_left = {w: 2 for w in range(10)}
+        free, dreg, steps = ["r2", "r3"], {}, []
+        for item in order:
+            a, b = operands(item)
+            for w in (a, b):
+                uses_left[w] -= 1
+            dying = [reg_of[w] for w in (a, b) if uses_left[w] == 0]
+            want_low = item not in initial
+            d = min(dying + free, key=lambda r: ((r in LOW) != want_low, r not in dying))
+            if not want_low and d in LOW:
+                return None
+            if d in free:
+                free.remove(d)
+            free += [r for r in dying if r != d]
+            steps.append((item, d, reg_of[a], reg_of[b]))
+            if want_low:
+                free.append(d)
+            else:
+                dreg[item] = d
+        return steps, dreg, free
+
+    # The first D order (in a fixed pseudo-random sequence) that fits.
+    rng, order = random.Random(0), list(range(10))
+    while (res := allocate(order)) is None:
+        rng.shuffle(order)
+    steps, dreg, free = res
+    for item, d, ra, rb in steps:
+        if item % 2 == 0:
+            e(f"    eor {d}, {ra}, {rb}, ror #31")
+        else:
+            e(alu("eor", d, ra, rb))
+        if item in tabled:
+            e(f"    str {d}, [sp, #{DT + 4 * item}]")
+    assert sorted(free) == sorted(f"r{i}" for i in range(2, 8))
+    # Rows: 5 B words and a chi temporary in the 6 registers that hold no D.
+    free.sort(key=lambda r: (r not in LOW, int(r[1:]) if r != "lr" else 14))
+    B, T = free[:5], free[5]
+
+    ops, k = [], 0
+    for Y, h in KECCAK_ROW_ORDER:
+        for X in range(5):
+            i, sh, rot = keccak_source(X, Y, h)
+            item = seq[k]
+            if plan[k] is not None:
+                r = dreg.pop(plan[k])
+                dreg[item] = r
+                ops.append(Op(f"    ldr {r}, [sp, #{DT + 4 * item}]", [r], ["sp"], "sp", True))
+            k += 1
+            ops.append(Op(f"    ldr {B[X]}, [{RS}, #{4 * (2 * i + sh)}]", [B[X]], [RS], "rs", True))
+            ops.append(Op(alu("eor", B[X], B[X], dreg[item]), [B[X]], [B[X], dreg[item]]))
+            if rot:
+                ops.append(Op(f"    ror {B[X]}, {B[X]}, #{32 - rot}", [B[X]], [B[X]]))
+        for X in ([1, 2, 3, 4, 0] if Y == 0 else range(5)):
+            b0, b1, b2 = B[X], B[(X + 1) % 5], B[(X + 2) % 5]
+            ops.append(Op(f"    bic {T}, {b2}, {b1}", [T], [b1, b2]))
+            ops.append(Op(alu("eor", T, T, b0), [T], [T, b0]))
+            if Y == 0 and X == 0:
+                # Iota: the round constant's half, through B3/B4 (dead after X = 3, 4).
+                p, rc = B[3], B[4]
+                ops.append(Op(f"    ldr {p}, [sp, #{RCP}]", [p], ["sp"], "sp", True))
+                ops.append(Op(f"    ldr {rc}, [{p}], #4", [rc, p], [p], "rc", True))
+                ops.append(Op(f"    str {p}, [sp, #{RCP}]", [], [p, "sp"], "sp"))
+                ops.append(Op(alu("eor", T, T, rc), [T], [T, rc]))
+            ops.append(Op(f"    str {T}, [{RD}, #{4 * (2 * (X + 5 * Y) + h)}]", [], [T, RD], "rd"))
+    # Next round: swap the states; stop after the last round constant.
+    ops.append(Op(f"    ldr {T}, [sp, #{RCP}]", [T], ["sp"], "sp", True))
+    ops.append(Op(f"    ldr {B[0]}, [sp, #{RCEND}]", [B[0]], ["sp"], "sp", True))
+    ops.append(Op(f"    mov {B[1]}, {RS}", [B[1]], [RS]))
+    ops.append(Op(f"    mov {RS}, {RD}", [RS], [RD]))
+    ops.append(Op(f"    mov {RD}, {B[1]}", [RD], [B[1]]))
+    out.extend(schedule(ops))
+    e(f"    cmp {T}, {B[0]}")
+    e("    bne 1b")
+    e(f"    add sp, sp, #{FRAME}")
+    e("    pop {r4-r11, pc}")
+    e(f"    .size {name}, . - {name}")
+    return out
+
+
+KECCAK_ZIP_STEPS = [(0x22222222, 1), (0x0C0C0C0C, 2), (0x00F000F0, 4), (0x0000FF00, 8)]
+
+
+def zip_steps(x: str, t: str, steps) -> list[str]:
+    """x ^= t ^ (t << s) for t = (x ^ (x >> s)) & mask: a swap of bit groups."""
+    out = []
+    for mask, sh in steps:
+        out += [f"    eor {t}, {x}, {x}, lsr #{sh}", f"    and {t}, {t}, #{mask:#010x}",
+                f"    eor {x}, {x}, {t}", f"    eor {x}, {x}, {t}, lsl #{sh}"]
+    return out
+
+
+def gen_keccak_oneblock() -> list[str]:
+    """keccak256_oneblock16_asm(out, block, len, rc): the lanes holding the input,
+    interleaved (even bits of a word to its low half, odd bits to its high half, then the
+    two words' halves exchanged), the rest zero, the padding, the permutation, and the
+    first two lanes back. Loops, to stay small next to the permutation in the cache."""
+    name = "keccak256_oneblock16_asm"
+    out = function(name)
+    e = out.append
+    # Frame: the state at 0, out at 200. 28 + 204 keeps sp 8-aligned.
+    e("    push {r4-r9, lr}")
+    e("    sub sp, sp, #204")
+    e("    str r0, [sp, #200]")
+    e("    mov r9, r3")
+    e("    mov r12, sp")
+    e("    adds r8, r2, #7")
+    e("    lsrs r8, r8, #3")             # lanes holding input
+    e("    beq 2f")
+    e("1:")
+    e("    ldrd r4, r5, [r1], #8")
+    out += zip_steps("r4", "r6", KECCAK_ZIP_STEPS)
+    out += zip_steps("r5", "r6", KECCAK_ZIP_STEPS)
+    e("    lsr r6, r4, #16")
+    e("    bfi r4, r5, #16, #16")        # even bits of the lane
+    e("    bfi r5, r6, #0, #16")         # odd bits
+    e("    strd r4, r5, [r12], #8")
+    e("    subs r8, #1")
+    e("    bne 1b")
+    e("2:")
+    e("    movs r4, #0")
+    e("    movs r5, #0")
+    e("    add r7, sp, #200")
+    e("3:")
+    e("    strd r4, r5, [r12], #8")
+    e("    cmp r12, r7")
+    e("    bne 3b")
+    # Padding: byte len's bit 0 is even bit 4 (len % 8) of lane len / 8; byte 135's bit 7
+    # is odd bit 31 of lane 16.
+    e("    bic r4, r2, #7")
+    e("    and r5, r2, #7")
+    e("    lsls r5, r5, #2")
+    e("    movs r6, #1")
+    e("    lsls r6, r5")
+    e("    ldr r7, [sp, r4]")
+    e("    eors r7, r6")
+    e("    str r7, [sp, r4]")
+    e("    ldr r7, [sp, #132]")
+    e("    eor r7, r7, #0x80000000")
+    e("    str r7, [sp, #132]")
+    e("    mov r0, sp")
+    e("    mov r1, r9")
+    e("    bl keccakf1600_asm")
+    e("    ldr r12, [sp, #200]")
+    e("    mov r1, sp")
+    e("    movs r8, #2")
+    e("4:")
+    e("    ldrd r4, r5, [r1], #8")
+    e("    lsr r6, r4, #16")
+    e("    bfi r4, r5, #16, #16")
+    e("    bfi r5, r6, #0, #16")
+    out += zip_steps("r4", "r6", KECCAK_ZIP_STEPS[::-1])
+    out += zip_steps("r5", "r6", KECCAK_ZIP_STEPS[::-1])
+    e("    strd r4, r5, [r12], #8")
+    e("    subs r8, #1")
+    e("    bne 4b")
+    e("    add sp, sp, #204")
+    e("    pop {r4-r9, pc}")
+    e(f"    .size {name}, . - {name}")
+    return out
+
+
+def keccak_file() -> str:
+    out = [HEADER, "    .global keccak_rc", "    .p2align 2", "keccak_rc:"]
+    for rc in keccak_rc64():
+        out.append("    .word {:#010x}, {:#010x}".format(*interleave(rc)))
+    return "\n".join(out + [""] + gen_keccakf() + [""] + gen_keccak_oneblock()) + "\n"
+
+
 if __name__ == "__main__":
     (OUT / "blake2s_thumb2.S").write_text(blake2s_file())
     (OUT / "sha256_thumb2.S").write_text(sha256_file())
-    print("wrote", OUT / "blake2s_thumb2.S", "and", OUT / "sha256_thumb2.S")
+    (OUT / "keccak_thumb2.S").write_text(keccak_file())
+    print("wrote", *(OUT / f"{h}_thumb2.S" for h in ("blake2s", "sha256", "keccak")))

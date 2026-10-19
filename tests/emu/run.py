@@ -12,12 +12,16 @@ import pathlib
 import struct
 import sys
 
+from Crypto.Hash import keccak
 from elftools.elf.elffile import ELFFile
 from unicorn import UC_ARCH_ARM, UC_HOOK_CODE, UC_MODE_MCLASS, UC_MODE_THUMB, Uc
 from unicorn import arm_const as R
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "host"))
 from sphincs_ref import SHA256_IV, sha256_compress, sha256_raw  # noqa: E402
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "scripts"))
+from gen_asm import KECCAK_RHO, interleave, keccak_rc64  # noqa: E402
 
 ELF = pathlib.Path(__file__).resolve().parent / "build" / "emu.elf"
 M32 = 0xFFFFFFFF
@@ -60,12 +64,47 @@ def b2s_compress_ref(h, m, t, f):
     return [h[i] ^ v[i] ^ v[i + 8] for i in range(8)]
 
 
+# --- Keccak-f[1600] reference (plain 64-bit lanes) -------------------------------------
+
+M64 = (1 << 64) - 1
+
+
+def rotl64(x, n):
+    return ((x << n) | (x >> (64 - n))) & M64 if n else x
+
+
+def keccakf_ref(a):
+    a = list(a)
+    for rc in keccak_rc64():
+        c = [a[x] ^ a[x + 5] ^ a[x + 10] ^ a[x + 15] ^ a[x + 20] for x in range(5)]
+        for x in range(5):
+            d = c[(x + 4) % 5] ^ rotl64(c[(x + 1) % 5], 1)
+            for y in range(0, 25, 5):
+                a[x + y] ^= d
+        b = [0] * 25
+        for x in range(5):
+            for y in range(5):
+                b[y + 5 * ((2 * x + 3 * y) % 5)] = rotl64(a[x + 5 * y], KECCAK_RHO[x + 5 * y])
+        a = [b[i] ^ (~b[(i % 5 + 1) % 5 + i - i % 5] & b[(i % 5 + 2) % 5 + i - i % 5]) for i in range(25)]
+        a[0] ^= rc
+    return a
+
+
+def interleaved(lanes) -> bytes:
+    return struct.pack("<50I", *(w for lane in lanes for w in interleave(lane)))
+
+
+def keccak256(data: bytes) -> bytes:
+    return keccak.new(digest_bits=256, data=data).digest()
+
+
 # --- Emulator ---------------------------------------------------------------------------
 
 RET = 0x7FFF0000
 STACK_TOP = 0x2000EF00  # sp at the call; the CALLER_FRAME bytes above it stand for the caller's frame
 CALLER_FRAME = 0x100
 BUF_H, BUF_M = 0x2000F100, 0x2000F200
+BUF_S, BUF_IN = 0x2000F300, 0x2000F400  # Keccak state (200 bytes), input
 CALLEE_SAVED = (R.UC_ARM_REG_R4, R.UC_ARM_REG_R5, R.UC_ARM_REG_R6, R.UC_ARM_REG_R7, R.UC_ARM_REG_R8,
                 R.UC_ARM_REG_R9, R.UC_ARM_REG_R10, R.UC_ARM_REG_R11)
 
@@ -120,7 +159,12 @@ def main():
     emu = Emu()
     emu.call("blake2s_setup")
     emu.call("sha256_setup")
-    sigma, k = emu.sym["g_sigma"], emu.sym["g_k"]  # the RAM tables, as on the device
+    emu.call("keccak_setup")
+    sigma, k, rc = emu.sym["g_sigma"], emu.sym["g_k"], emu.sym["g_rc"]  # the RAM tables, as on the device
+    # Our own Keccak-f reference first: Keccak-256 of a short input, one permutation.
+    lanes = [0] * 25
+    lanes[0], lanes[16] = 0x01, 1 << 63
+    assert struct.pack("<4Q", *keccakf_ref(lanes)[:4]) == keccak256(b"")
     counts = {}
     for _ in range(300):
         h = struct.unpack("<8I", os.urandom(32))
@@ -147,8 +191,35 @@ def main():
         emu.put(BUF_M, msg.ljust(64, b"\0"))
         counts["sha256_oneblock16_asm"] = emu.call("sha256_oneblock16_asm", BUF_H, BUF_M, k)
         assert emu.get(BUF_H, 16) == sha256_raw(msg.ljust(64, b"\0"))[:16]
+
+        lanes = struct.unpack("<25Q", os.urandom(200))
+        emu.put(BUF_S, interleaved(lanes))
+        counts["keccakf1600_asm"] = emu.call("keccakf1600_asm", BUF_S, rc)
+        assert emu.get(BUF_S, 200) == interleaved(keccakf_ref(lanes))
+
+        emu.put(BUF_M, msg.ljust(64, b"\0"))
+        counts["keccak256_oneblock16_asm"] = emu.call("keccak256_oneblock16_asm", BUF_H, BUF_M, n, rc)
+        assert emu.get(BUF_H, 16) == keccak256(msg)[:16]
     assert sha256_compress(SHA256_IV, bytes(64))  # reference sanity
-    print("all 4 functions match the reference on 300 random inputs and honour the calling convention")
+    # The Keccak sponge's C (absorb, pad, squeeze: bit interleaving) over several blocks.
+    for n_words in (0, 1, 33, 34, 35, 68, 100):
+        data = os.urandom(4 * n_words)
+        emu.put(BUF_S, bytes(200))
+        rest = data
+        while True:
+            take = rest[:136]
+            emu.put(BUF_IN, take)
+            emu.call("keccak_absorb", BUF_S, BUF_IN, len(take) // 4)
+            if len(rest) <= 135:
+                break
+            emu.call("keccak_permute", BUF_S)
+            rest = rest[136:]
+        emu.call("keccak_pad", BUF_S, len(rest))
+        emu.call("keccak_permute", BUF_S)
+        emu.call("keccak_squeeze", BUF_H, BUF_S, 8)
+        assert emu.get(BUF_H, 32) == keccak256(data), n_words
+    print("all 6 assembly functions match the reference on 300 random inputs and honour the calling convention;")
+    print("the Keccak-256 sponge matches over 0 to 400 bytes")
     for name, c in counts.items():
         print(f"  {name:22s} {c:5d} instructions")
 

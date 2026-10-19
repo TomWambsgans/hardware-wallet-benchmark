@@ -1,5 +1,5 @@
 // The device's scheme code (ledger-app/src/crypto, portable C paths) on the host.
-//   spx_native <blake2s|sha256> <seed hex> <message hex>  ->  "P root signature"
+//   spx_native <blake2s|sha256|keccak256> <seed hex> <message hex>  ->  "P root signature"
 
 #include <stdio.h>
 #include <string.h>
@@ -26,10 +26,12 @@ int main(int argc, char **argv) {
     spx_sign_stats_t stats;
 
     if (argc != 4) {
-        fprintf(stderr, "usage: %s <blake2s|sha256> <seed hex> <message hex>\n", argv[0]);
+        fprintf(stderr, "usage: %s <blake2s|sha256|keccak256> <seed hex> <message hex>\n", argv[0]);
         return 2;
     }
-    g_hash = strcmp(argv[1], "sha256") == 0 ? HASH_SHA256 : HASH_BLAKE2S;
+    g_hash = strcmp(argv[1], "sha256") == 0      ? HASH_SHA256
+             : strcmp(argv[1], "keccak256") == 0 ? HASH_KECCAK256
+                                                 : HASH_BLAKE2S;
     unhex(seed, argv[2], 32);
     unhex(msg, argv[3], 32);
     spx_keygen(&key, seed);

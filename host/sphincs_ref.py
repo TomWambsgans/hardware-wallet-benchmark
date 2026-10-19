@@ -1,18 +1,22 @@
-"""Python reference of leanVM's SPHINCS+ variant (WOTS+C, FORS+C), with two hashes.
+"""Python reference of leanVM's SPHINCS+ variant (WOTS+C, FORS+C), with three hashes.
 
 A straight port of leanVM `crates/sphincs` (spec: leanVM `doc/sphincs/main.tex`):
 n = 16, w = 3, v = 42, T = 191, d = 3 layers of heights (12, 7, 7) numbered from the top,
 a = 10, k = 15 (k - 1 trees, the last index ground to zero). Every hash is
-Th(P, tw, M) = H(tw || P || M)[:16] (the message digest keeps 22 bytes), with H either
+Th(P, tw, M) = H(tw || P || M)[:16] (the message digest keeps 22 bytes), with H
 
-  - "blake2s": BLAKE2s-256 (leanVM's scheme), or
-  - "sha256":  the SHA-256 compression function (FIPS 180-4) applied from the standard IV to
-               the input's 64-byte blocks, the last one zero-padded, with no length padding;
-               the digest is the final state, big-endian. Every input length here is fixed by
-               its tweak type, so one compression per call of at most 64 bytes, like BLAKE2s.
+  - "blake2s":   BLAKE2s-256 (leanVM's scheme),
+  - "sha256":    the SHA-256 compression function (FIPS 180-4) applied from the standard IV to
+                 the input's 64-byte blocks, the last one zero-padded, with no length padding;
+                 the digest is the final state, big-endian. Every input length here is fixed
+                 by its tweak type, so one compression per call of at most 64 bytes, like
+                 BLAKE2s; or
+  - "keccak256": Keccak-256 as in Ethereum (original Keccak padding, not SHA3-256): one
+                 Keccak-f[1600] permutation per 136 bytes.
 
-    python host/sphincs_ref.py                          # check against vectors/ (seconds)
-    python host/sphincs_ref.py --make-sha256-vectors    # regenerate vectors/sha256.json (minutes)
+    python host/sphincs_ref.py                                # check against vectors/ (seconds)
+    python host/sphincs_ref.py --make-vectors sha256          # regenerate vectors/sha256.json (minutes)
+    python host/sphincs_ref.py --make-vectors keccak256       # regenerate vectors/keccak256.json
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ import json
 import pathlib
 import struct
 import sys
+
+from Crypto.Hash import keccak
 
 N = 16
 W, CHAIN_LEN, V, TARGET_SUM = 3, 8, 42, 191
@@ -81,6 +87,7 @@ def sha256_raw(data: bytes) -> bytes:
 HASHES = {
     "blake2s": lambda data: hashlib.blake2s(data).digest(),
     "sha256": sha256_raw,
+    "keccak256": lambda data: keccak.new(digest_bits=256, data=data).digest(),
 }
 
 
@@ -304,9 +311,15 @@ def load_vectors(hash_name: str) -> list[dict]:
     return [{k: (bytes.fromhex(x) if isinstance(x, str) else x) for k, x in v.items()} for v in raw]
 
 
-def make_sha256_vectors():
-    """vectors/sha256.json from this reference: one key, two messages (pure Python: minutes)."""
-    s = Sphincs("sha256")
+SCHEME_NAMES = {
+    "sha256": "raw SHA-256 compression",
+    "keccak256": "Keccak-256 (Ethereum's)",
+}
+
+
+def make_vectors(hash_name: str):
+    """vectors/<hash_name>.json from this reference: one key, two messages (minutes)."""
+    s = Sphincs(hash_name)
     seed = bytes([0x11] * 32)
     pp, root, cache = s.keygen(seed)
     entries = []
@@ -315,15 +328,16 @@ def make_sha256_vectors():
         assert s.verify(pp, root, m, sig)
         entries.append({"seed": seed.hex(), "public_param": pp.hex(), "root": root.hex(), "message": m.hex(),
                         "signature": sig.hex()})
-    doc = {"scheme": "leanVM SPHINCS+ variant with H = raw SHA-256 compression (host/sphincs_ref.py)",
+    doc = {"scheme": f"leanVM SPHINCS+ variant with H = {SCHEME_NAMES[hash_name]} (host/sphincs_ref.py)",
            "signature_bytes": SIG_SIZE, "vectors": entries}
-    (VECTORS / "sha256.json").write_text(json.dumps(doc, indent=2) + "\n")
+    (VECTORS / f"{hash_name}.json").write_text(json.dumps(doc, indent=2) + "\n")
 
 
 if __name__ == "__main__":
-    if "--make-sha256-vectors" in sys.argv:
-        make_sha256_vectors()
-        print("wrote vectors/sha256.json")
+    if "--make-vectors" in sys.argv:
+        name = sys.argv[sys.argv.index("--make-vectors") + 1]
+        make_vectors(name)
+        print(f"wrote vectors/{name}.json")
         sys.exit()
     # BLAKE2s: the full scheme against leanVM's vectors (hashlib: fast).
     s = Sphincs("blake2s")
@@ -345,3 +359,9 @@ if __name__ == "__main__":
     for v in load_vectors("sha256"):
         assert s.verify(v["public_param"], v["root"], v["message"], v["signature"])
     print("sha256: compression matches hashlib; vectors/sha256.json signatures verify")
+    # Keccak-256: Ethereum's empty-input digest, then verification of the stored vectors.
+    assert HASHES["keccak256"](b"").hex() == "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+    s = Sphincs("keccak256")
+    for v in load_vectors("keccak256"):
+        assert s.verify(v["public_param"], v["root"], v["message"], v["signature"])
+    print("keccak256: Ethereum's keccak256(\"\"); vectors/keccak256.json signatures verify")

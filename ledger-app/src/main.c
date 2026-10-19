@@ -1,18 +1,20 @@
 // PQ Bench: leanVM's SPHINCS+ variant (keygen with the layer-0 cache, sign) on a
-// Ledger Nano S Plus, with H = BLAKE2s-256 or the raw SHA-256 compression.
+// Ledger Nano S Plus, with H = BLAKE2s-256, the raw SHA-256 compression or Keccak-256.
 //
 // A research app for a test device: there is no on-screen confirmation, the key is
 // kept unencrypted in the app's flash, and the screen freezes during computations.
 //
-// APDUs (CLA 0xE0; P1 = hash: 0 BLAKE2s, 1 SHA-256; counters are big-endian u32):
-//   01 INFO     -> version (3 bytes), have_key[2]
+// APDUs (CLA 0xE0; P1 = hash: 0 BLAKE2s, 1 SHA-256, 2 Keccak-256; counters are big-endian u32):
+//   01 INFO     -> version (3 bytes), have_key[3]
 //   02 KEYGEN   data: 32-byte seed (or empty: seed from the TRNG)
 //               -> P (16) || root (16) || compressions; the key is stored in flash
 //   03 SIGN     data: 32-byte message -> compressions || randomizer trials || 3 counters;
 //               the 4924-byte signature is kept in RAM
 //   04 GET_SIG  P1 = chunk i -> signature bytes [240 i, 240 i + 240)
-//   05 BENCH    data: count (u32) -> runs count compressions (timed by the host)
+//   05 BENCH    data: count (u32) -> runs count compressions (Keccak: permutations), timed by the host
 //   06 NOP      (USB round-trip baseline)
+//   07 BENCH_OS data: count (u32) -> the OS's (cx) Keccak-256, count times over 64 bytes whose first
+//               byte is the previous digest's (first input all zero) -> the last digest
 
 #include <stdint.h>
 #include <string.h>
@@ -26,12 +28,21 @@
 
 #include "crypto/blake2s.h"
 #include "crypto/hash.h"
+#include "crypto/keccak.h"
 #include "crypto/sha256.h"
 #include "crypto/sphincs.h"
 
 #define CLA 0xE0
 
-enum { INS_INFO = 0x01, INS_KEYGEN = 0x02, INS_SIGN = 0x03, INS_GET_SIG = 0x04, INS_BENCH = 0x05, INS_NOP = 0x06 };
+enum {
+    INS_INFO = 0x01,
+    INS_KEYGEN = 0x02,
+    INS_SIGN = 0x03,
+    INS_GET_SIG = 0x04,
+    INS_BENCH = 0x05,
+    INS_NOP = 0x06,
+    INS_BENCH_OS = 0x07,
+};
 
 #define SW_OK              0x9000
 #define SW_WRONG_LENGTH    0x6700
@@ -40,6 +51,7 @@ enum { INS_INFO = 0x01, INS_KEYGEN = 0x02, INS_SIGN = 0x03, INS_GET_SIG = 0x04, 
 #define SW_INS_UNSUPPORTED 0x6D00
 #define SW_CLA_UNSUPPORTED 0x6E00
 #define SW_SIGN_MISMATCH   0x6F02
+#define SW_CX_ERROR        0x6F03
 
 #define SIG_CHUNK 240
 
@@ -67,6 +79,10 @@ static void put_be32(uint8_t *p, uint32_t v) {
     p[3] = (uint8_t) v;
 }
 
+static uint32_t read_be32(const uint8_t *p) {
+    return ((uint32_t) p[0] << 24) | ((uint32_t) p[1] << 16) | ((uint32_t) p[2] << 8) | p[3];
+}
+
 static void handle(const command_t *cmd) {
     uint8_t out[40];
 
@@ -81,12 +97,33 @@ static void handle(const command_t *cmd) {
             out[2] = PATCH_VERSION;
             out[3] = G_have_key[HASH_BLAKE2S];
             out[4] = G_have_key[HASH_SHA256];
-            io_send_response_pointer(out, 5, SW_OK);
+            out[5] = G_have_key[HASH_KECCAK256];
+            io_send_response_pointer(out, 6, SW_OK);
             return;
 
         case INS_NOP:
             io_send_sw(SW_OK);
             return;
+
+        case INS_BENCH_OS: {
+            if (cmd->lc != 4) {
+                io_send_sw(SW_WRONG_LENGTH);
+                return;
+            }
+            uint32_t   count = read_be32(cmd->data);
+            uint8_t    in[64] = {0}, digest[32] = {0};
+            cx_sha3_t  ctx;
+            for (uint32_t i = 0; i < count; i++) {
+                in[0] = digest[0];
+                if (cx_keccak_init_no_throw(&ctx, 256) != CX_OK || cx_sha3_update(&ctx, in, sizeof(in)) != CX_OK
+                    || cx_sha3_final(&ctx, digest) != CX_OK) {
+                    io_send_sw(SW_CX_ERROR);
+                    return;
+                }
+            }
+            io_send_response_pointer(digest, 32, SW_OK);
+            return;
+        }
 
         case INS_GET_SIG: {
             uint32_t off = (uint32_t) cmd->p1 * SIG_CHUNK;
@@ -165,12 +202,13 @@ static void handle(const command_t *cmd) {
                 io_send_sw(SW_WRONG_LENGTH);
                 return;
             }
-            uint32_t count = ((uint32_t) cmd->data[0] << 24) | ((uint32_t) cmd->data[1] << 16)
-                             | ((uint32_t) cmd->data[2] << 8) | cmd->data[3];
-            uint32_t h[8] = {0}, m[16] = {0};
+            uint32_t count = read_be32(cmd->data);
+            uint32_t h[50] = {0}, m[16] = {0};
             for (uint32_t i = 0; i < count; i++) {
                 if (hash == HASH_SHA256) {
                     sha256_compress(h, m);
+                } else if (hash == HASH_KECCAK256) {
+                    keccak_permute(h);
                 } else {
                     blake2s_compress(h, m, 64, 0xFFFFFFFFu);
                 }
