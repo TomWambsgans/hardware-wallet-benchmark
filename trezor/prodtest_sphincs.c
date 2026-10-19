@@ -1,10 +1,10 @@
 /*
- * SPHINCS+ benchmark commands (leanVM's variant; BLAKE2s or raw SHA-256),
+ * SPHINCS+ benchmark commands (leanVM's variant; BLAKE2s, raw SHA-256 or Keccak-256),
  * from github.com/TomWambsgans/hardware-wallet-benchmark (sources in
  * cmd/sphincs/). Timings are CPU cycles from systick_cycles(), printed as two
  * 32-bit halves <hi> <lo>.
  *
- *   sphincs-bench <hash> <count>    count compressions
+ *   sphincs-bench <hash> <count>    count compressions (Keccak: permutations)
  *     -> OK <cycles hi> <cycles lo> <count>
  *   sphincs-keygen <hash> <seed>    32-byte seed (hex); key kept in RAM
  *     -> OK <P hex> <root hex> <cycles hi> <cycles lo> <compressions>
@@ -12,7 +12,7 @@
  *     -> PROGRESS sig <offset> <hex> ... (the 4924-byte signature)
  *     -> OK <cycles hi> <cycles lo> <compressions> <randomizer trials> <c0> <c1> <c2>
  *
- * <hash> is "blake2s" or "sha256".
+ * <hash> is "blake2s", "sha256" or "keccak256".
  */
 
 #include <trezor_rtl.h>
@@ -22,6 +22,7 @@
 
 #include "sphincs/blake2s.h"
 #include "sphincs/hash.h"
+#include "sphincs/keccak.h"
 #include "sphincs/sha256.h"
 #include "sphincs/sphincs.h"
 
@@ -36,8 +37,10 @@ static bool parse_hash(cli_t* cli, hash_id_t* hash) {
     *hash = HASH_BLAKE2S;
   } else if (strcmp(name, "sha256") == 0) {
     *hash = HASH_SHA256;
+  } else if (strcmp(name, "keccak256") == 0) {
+    *hash = HASH_KECCAK256;
   } else {
-    cli_error_arg(cli, "Expecting hash blake2s or sha256.");
+    cli_error_arg(cli, "Expecting hash blake2s, sha256 or keccak256.");
     return false;
   }
   if (!g_setup_done) {
@@ -75,11 +78,13 @@ static void prodtest_sphincs_bench(cli_t* cli) {
     cli_error_arg(cli, "Expecting count.");
     return;
   }
-  uint32_t h[8] = {0}, m[16] = {0};
+  uint32_t h[50] = {0}, m[16] = {0};
   uint64_t start = systick_cycles();
   for (uint32_t i = 0; i < count; i++) {
     if (hash == HASH_SHA256) {
       sha256_compress(h, m);
+    } else if (hash == HASH_KECCAK256) {
+      keccak_permute(h);
     } else {
       blake2s_compress(h, m, 64, 0xFFFFFFFFu);
     }
@@ -156,7 +161,7 @@ static void prodtest_sphincs_sign(cli_t* cli) {
 PRODTEST_CLI_CMD(
   .name = "sphincs-bench",
   .func = prodtest_sphincs_bench,
-  .info = "Time <count> compressions of <hash> (blake2s|sha256)",
+  .info = "Time <count> compressions of <hash> (blake2s|sha256|keccak256)",
   .args = "<hash> <count>"
 );
 

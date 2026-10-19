@@ -31,8 +31,8 @@ git -C "$TF" checkout -q -f -B sphincs-bench "$TREZOR_COMMIT"
 git -C "$TF" clean -q -dfx -e build -e ci
 
 mkdir -p "$TF/$PRODTEST/cmd/sphincs"
-cp "$ROOT"/ledger-app/src/crypto/{sphincs,hash,blake2s,sha256}.{c,h} \
-   "$ROOT"/ledger-app/src/crypto/{blake2s,sha256}_thumb2.S "$TF/$PRODTEST/cmd/sphincs/"
+cp "$ROOT"/ledger-app/src/crypto/{sphincs,hash,blake2s,sha256,keccak}.{c,h} \
+   "$ROOT"/ledger-app/src/crypto/{blake2s,sha256,keccak}_thumb2.S "$TF/$PRODTEST/cmd/sphincs/"
 cp "$ROOT/trezor/prodtest_sphincs.c" "$TF/$PRODTEST/cmd/"
 git -C "$TF" apply "$ROOT/trezor/prodtest-build.patch"
 git -C "$TF" add -A

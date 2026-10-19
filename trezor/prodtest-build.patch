@@ -24,12 +24,12 @@ index 0a3c88c..4674308 100644
                  "prodtest_syslog.c",
                  "prodtest_telemetry.c",
                  "prodtest_touch.c",
-@@ -69,6 +70,19 @@ fn main() -> Result<()> {
+@@ -69,6 +70,21 @@ fn main() -> Result<()> {
                      "prodtest_wpc.c",
                  ],
              );
 +            // SPHINCS+ benchmark (hardware-wallet-benchmark): portable C scheme,
-+            // Thumb-2 BLAKE2s and SHA-256 compressions.
++            // Thumb-2 BLAKE2s and SHA-256 compressions and Keccak-f[1600].
 +            lib.add_sources_in_dir(
 +                "cmd/sphincs",
 +                [
@@ -37,8 +37,10 @@ index 0a3c88c..4674308 100644
 +                    "hash.c",
 +                    "blake2s.c",
 +                    "sha256.c",
++                    "keccak.c",
 +                    "blake2s_thumb2.S",
 +                    "sha256_thumb2.S",
++                    "keccak_thumb2.S",
 +                ],
 +            );
  

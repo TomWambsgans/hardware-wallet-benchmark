@@ -1,6 +1,6 @@
 """Benchmark SPHINCS+ on a Trezor Safe 3 running the prodtest firmware of trezor/build.sh.
 
-    .venv/bin/python trezor/bench.py                  # both hashes -> results/trezor-safe3.json
+    .venv/bin/python trezor/bench.py                  # every hash -> results/trezor-safe3.json
     .venv/bin/python trezor/bench.py --hash sha256 --sigs 1
 
 Talks to prodtest's text command line over its USB serial port. For each hash:
@@ -115,7 +115,7 @@ def run(dev: Prodtest, hash_name: str, n_random: int) -> dict:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--hash", choices=["blake2s", "sha256", "both"], default="both")
+    p.add_argument("--hash", choices=["blake2s", "sha256", "keccak256", "all"], default="all")
     p.add_argument("--sigs", type=int, default=3, help="random-message signatures per hash (default 3)")
     p.add_argument("--port", help="serial port (default: the first Trezor one)")
     p.add_argument("--out", default="results/trezor-safe3.json")
@@ -127,12 +127,12 @@ def main():
     res = {"date": datetime.datetime.now().isoformat(timespec="seconds"), "device": "Trezor Safe 3 (T3B1)",
            "firmware": "prodtest + SPHINCS+ commands (trezor/build.sh)", "cpu_hz": CPU_HZ,
            "repo_commit": commit, "hashes": {}}
-    for h in ["blake2s", "sha256"] if args.hash == "both" else [args.hash]:
+    for h in ["blake2s", "sha256", "keccak256"] if args.hash == "all" else [args.hash]:
         res["hashes"][h] = run(dev, h, args.sigs)
 
-    print(f"\n{'hash':8s} {'compression':>16s} {'per second':>11s} {'keygen':>8s} {'sign (mean, min-max)':>24s}")
+    print(f"\n{'hash':10s} {'compression':>16s} {'per second':>11s} {'keygen':>8s} {'sign (mean, min-max)':>24s}")
     for h, r in res["hashes"].items():
-        print(f"{h:8s} {r['compression_us']:6.2f} us ({r['compression_cycles']:4.0f} c) "
+        print(f"{h:10s} {r['compression_us']:6.2f} us ({r['compression_cycles']:4.0f} c) "
               f"{1e6 / r['compression_us']:11,.0f} {r['keygen_s']:6.2f} s "
               f"{r['sign_s_mean']:8.2f} s ({r['sign_s_min']:.2f}-{r['sign_s_max']:.2f})")
     out = REPO / args.out

@@ -11,7 +11,7 @@ Cortex-M33 at 160 MHz) as three commands added to Trezor's production-test firmw
 | `sphincs-keygen <hash> <seed>` | key generation (with the layer-0 cache) from a 32-byte hex seed |
 | `sphincs-sign <hash> <message>` | sign a 32-byte hex message; the signature comes back as `PROGRESS` lines |
 
-`<hash>` is `blake2s` or `sha256`; timings are CPU cycles (`systick_cycles()`).
+`<hash>` is `blake2s`, `sha256` or `keccak256`; timings are CPU cycles (`systick_cycles()`).
 
 ## Build
 
