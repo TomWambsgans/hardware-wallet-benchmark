@@ -7,7 +7,7 @@ Ethereum), per second, measured during SPHINCS+ signing
 | | BLAKE2s | SHA-256 | Keccak-256 |
 |---|---|---|---|
 | Trezor Safe 3 | **80.3K/s** | **56.5K/s** | — |
-| Ledger Nano S Plus | **32.8K/s** | **23.8K/s** | **5.6K/s** |
+| Ledger Nano S Plus | **32.6K/s** | **23.6K/s** | **5.8K/s** |
 
 Signatures match the test vectors. Raw data: `results/*.json`; table: `host/rates.py`. The
 Trezor's firmware includes Keccak-256 but has not been reflashed and measured with it yet.
@@ -76,7 +76,7 @@ its PIN, on the dashboard.
    scripts/build.sh
    ```
    The build is deterministic: `ledger-app/build/nanos2/bin/app.elf` has SHA-256
-   `bd7ef29da83585c1776d93fa8f1a1d2bd9bbf2e1ac53b1ade71fbf925f882e01`.
+   `9c8d57dfc6bf5a3067935f5eda5bb15195153344be68e4041106925fe528fad0`.
 2. Install it and open it:
    ```sh
    scripts/load.sh
@@ -194,14 +194,17 @@ with bootloader 2.1.16 and official firmware 2.12.5.
   inside the instruction cache): θ's column parities from the state, then each row's five
   words loaded, XORed with D, rotated, and χ'd into a second state, the two swapping each
   round. The ten D words live in six registers, with the row order picked by exhaustive
-  search to reload as few as possible (7 per round). The one-block Th interleaves its input
-  and de-interleaves its output (~3%). During signing it runs at 5.6K/s, 9% under the loop
-  (BLAKE2s: 2%). The OS's own Keccak-256 (`cx_keccak_init` + `cx_sha3_update` +
+  search to reload as few as possible (7 per round). A one-block Th interleaves its input
+  and de-interleaves its output: 174 µs. A WOTS chain step does neither (its output lanes are
+  the next input's lanes, kept interleaved; only the position p is redone): 165 µs, all in
+  the instruction cache. During signing: 5.8K/s, 6% under the loop (BLAKE2s: 3%). The OS's own Keccak-256 (`cx_keccak_init` + `cx_sha3_update` +
   `cx_sha3_final`, what Ledger's Ethereum app calls) takes 1.21 ms per 64-byte hash, 7.4x
   slower.
 - **Trezor Safe 3.** The commands run inside Trezor's production-test firmware (a C command line
   over USB serial), so no Trezor firmware logic is involved; the key lives in RAM until the
   next reboot. The STM32U585 has a SHA-256 peripheral, not used here: it computes padded
   SHA-256, not this scheme's bare compression.
+- **The SDK's `memset` and `memcpy` copy byte by byte** (~3 cycles a byte): the hot paths
+  copy words instead.
 - **Not production code**: no on-screen confirmation, no side-channel or fault-attack
   countermeasures, key unencrypted in flash.

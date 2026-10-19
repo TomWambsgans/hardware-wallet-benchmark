@@ -1,115 +1,121 @@
 {
-  "date": "2026-10-19T12:17:08",
+  "date": "2026-10-19T12:53:00",
   "device": "Ledger Nano S Plus",
   "app_version": "1.0.0",
-  "repo_commit": "02b5694",
-  "usb_roundtrip_ms": 3.990479002823122,
+  "repo_commit": "0f80d7f",
+  "usb_roundtrip_ms": 3.999541499069892,
   "hashes": {
     "blake2s": {
-      "compression_us": 29.851025996322278,
-      "keygen_s": 43.12480335398868,
+      "compression_us": 29.737354125245474,
+      "oneblock_th_us": 29.46235412673559,
+      "chain_step_us": 29.48761462539551,
+      "keygen_s": 43.09377833351027,
       "keygen_compressions": 1425408,
       "signatures": [
         {
           "message": "vector",
-          "s": 5.789700645997073,
+          "s": 5.778870000503957,
           "compressions": 189076
         },
         {
           "message": "vector",
-          "s": 5.606171353996615,
+          "s": 5.593946125503862,
           "compressions": 183843
         },
         {
-          "message": "5c642c9de623909e98d1a93893a55e2f074c10cc680414ab00789989dcd42c24",
-          "s": 5.349023520990158,
-          "compressions": 175517
+          "message": "4f03b509cf0a6e574be8d572783fc417c0f9320603cfe5ac48ebb4d459e49cfd",
+          "s": 6.052936583495466,
+          "compressions": 196493
         },
         {
-          "message": "f613c3d2861d3967f6a4f075cbdd9aca3465094d2c73d13ff9e8efda604f4c63",
-          "s": 7.541281645986601,
-          "compressions": 249783
+          "message": "1a58393ddecc87a3fb83cca3470fd7693481d0344f4cca0c8227166289c6c354",
+          "s": 5.821509667497594,
+          "compressions": 192118
         },
         {
-          "message": "f14551a5304c81f07bce1a655292560ee56294321e950c2e1fc08a7705c9575f",
-          "s": 6.756610937984078,
-          "compressions": 221188
+          "message": "63b423fc8bf05a10c48513d20c8a7b12f9725bbdb6c4bf09eb1130a8d3c799d1",
+          "s": 5.80559891750454,
+          "compressions": 185898
         }
       ],
-      "sign_s_mean": 6.208557620990905,
-      "sign_s_min": 5.349023520990158,
-      "sign_s_max": 7.541281645986601
+      "sign_s_mean": 5.810572258901084,
+      "sign_s_min": 5.593946125503862,
+      "sign_s_max": 6.052936583495466
     },
     "sha256": {
-      "compression_us": 41.10382825092529,
-      "keygen_s": 59.845655771001475,
+      "compression_us": 41.14460412529297,
+      "oneblock_th_us": 41.96904162745341,
+      "chain_step_us": 40.990708374010865,
+      "keygen_s": 59.959713917502086,
       "keygen_compressions": 1425408,
       "signatures": [
         {
           "message": "vector",
-          "s": 9.946767312998418,
+          "s": 10.012911333498778,
           "compressions": 236371
         },
         {
           "message": "vector",
-          "s": 9.142211436992511,
+          "s": 9.20300679250795,
           "compressions": 218255
         },
         {
-          "message": "4ae8a55fd7acecd76cc4c3ba188dd314950ea32e99f4cd94108808725af890e8",
-          "s": 7.991097812002408,
-          "compressions": 189696
+          "message": "e75f610110396e638228a666bb6582bd6e7d83f601d3e05b58ab45fc11cc9ca2",
+          "s": 8.053037458492327,
+          "compressions": 190085
         },
         {
-          "message": "2fa5a7e5e5abc9c6d3e76caeae3749f17ccc435bfea8b7d1794f8a7f08389ab0",
-          "s": 13.431985103990883,
-          "compressions": 318820
+          "message": "6330d0d764e940d786ad285c9f3c69c63162261ad29bdaf3d3e459b8ceab55e6",
+          "s": 9.233799250490847,
+          "compressions": 217637
         },
         {
-          "message": "17ec1d02d24a607aa0bb60a81a3ee30e034303d11a61c8367b512a2efb07b982",
-          "s": 8.0550200209982,
-          "compressions": 191097
+          "message": "2028da142ec7fdc47fcd8adfc0060e752075c707d662d3c3e8b5178369f025fc",
+          "s": 8.74873224949988,
+          "compressions": 206424
         }
       ],
-      "sign_s_mean": 9.713416337396485,
-      "sign_s_min": 7.991097812002408,
-      "sign_s_max": 13.431985103990883
+      "sign_s_mean": 9.050297416897957,
+      "sign_s_min": 8.053037458492327,
+      "sign_s_max": 10.012911333498778
     },
     "keccak256": {
-      "compression_us": 163.31789598916657,
-      "os_keccak256_us": 1208.1376040005125,
-      "keygen_s": 247.22523377099424,
+      "compression_us": 163.05837449908722,
+      "oneblock_th_us": 173.99595851020422,
+      "chain_step_us": 165.0054584897589,
+      "os_keccak256_us": 1207.9937085072743,
+      "keygen_s": 238.54363575050957,
       "keygen_compressions": 1404928,
       "signatures": [
         {
           "message": "vector",
-          "s": 37.45058943799813,
+          "s": 36.722313458507415,
           "compressions": 211822
         },
         {
           "message": "vector",
-          "s": 40.666014562986675,
+          "s": 39.93670229249983,
           "compressions": 230051
         },
         {
-          "message": "8db951ec1c87164ce1b961dfe518977298ca8b8c8cda7bdaaa5c2b4b39f352d4",
-          "s": 31.80088660400361,
-          "compressions": 179731
+          "message": "34029542441d441c13ff2d2848874d76ab6afa6ee665cabfd87530beb57244d4",
+          "s": 28.576827708500787,
+          "compressions": 165439
         },
         {
-          "message": "e521c14d58df6b3ab0b0ad0e55f471f0c384c8d56f5d0f30b62a98fe1bcaeaeb",
-          "s": 32.647367896002834,
-          "compressions": 184041
+          "message": "f3580b7b6fcf2c547575cc771d7e4cfc408a70b057be6b67378db805944d6c23",
+          "s": 31.303660208490328,
+          "compressions": 180629
         },
         {
-          "message": "83c5f52ad52e1fc9f65bdefe46100979c43914543e6004bc77cfa1583ed8f5dd",
-          "s": 34.90917031200661,
-          "compressions": 196714
+          "message": "5e01b9b1422fa69fd6920ba73e7d77e859a38f9b04ef79c973ad551561f8fbaf",
+          "s": 29.832868249504827,
+          "compressions": 172746
         }
       ],
-      "sign_s_mean": 35.49480576259957,
-      "sign_s_min": 31.80088660400361,
-      "sign_s_max": 40.666014562986675
+      "sign_s_mean": 33.27447438350064,
+      "sign_s_min": 28.576827708500787,
+      "sign_s_max": 39.93670229249983
     }
   }
 }
