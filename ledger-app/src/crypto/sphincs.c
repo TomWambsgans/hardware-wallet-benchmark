@@ -79,11 +79,7 @@ static void chain(val_t v, uint32_t lay, uint32_t tau, uint32_t e, uint32_t i, u
     uint32_t blk[16];
     block_head(blk, TW_CHAIN, lay, tau, 0, e);
     blk[12] = blk[13] = blk[14] = blk[15] = 0;
-    for (uint32_t s = 1; s <= steps; s++) {
-        blk[1] = SPX_CHAIN_LEN * i + start + s - 1;
-        copy4(blk + 8, v);
-        th_oneblock(v, blk, 48);
-    }
+    th_chain(v, blk, SPX_CHAIN_LEN * i + start, steps);
 }
 
 // The Merkle leaf of a WOTS key: its 42 chain tips hashed in order (704 bytes,

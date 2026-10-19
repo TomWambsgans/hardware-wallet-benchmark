@@ -582,3 +582,71 @@ keccak256_oneblock16_asm:
     add sp, sp, #204
     pop {r4-r9, pc}
     .size keccak256_oneblock16_asm, . - keccak256_oneblock16_asm
+
+    .global keccak256_chain16_asm
+    .type keccak256_chain16_asm, %function
+    .thumb_func
+keccak256_chain16_asm:
+    push {r4-r11, lr}
+    sub sp, sp, #204
+    mov r4, r0
+    mov r5, r1
+    mov r6, r2
+    mov r7, r3
+    ldr r8, [sp, #240]
+1:
+    mov r0, r6
+    eor r1, r0, r0, lsr #1
+    and r1, r1, #0x22222222
+    eor r0, r0, r1
+    eor r0, r0, r1, lsl #1
+    eor r1, r0, r0, lsr #2
+    and r1, r1, #0x0c0c0c0c
+    eor r0, r0, r1
+    eor r0, r0, r1, lsl #2
+    eor r1, r0, r0, lsr #4
+    and r1, r1, #0x00f000f0
+    eor r0, r0, r1
+    eor r0, r0, r1, lsl #4
+    eor r1, r0, r0, lsr #8
+    and r1, r1, #0x0000ff00
+    eor r0, r0, r1
+    eor r0, r0, r1, lsl #8
+    ldr r2, [r5]
+    lsr r3, r2, #16
+    bfi r2, r0, #16, #16
+    bfi r0, r3, #0, #16
+    strd r2, r0, [sp]
+    add r12, r5, #8
+    ldm r12, {r0, r1, r2, r3, r10, r11}
+    add r12, sp, #8
+    stm r12!, {r0, r1, r2, r3, r10, r11}
+    ldm r4, {r0, r1, r2, r3}
+    stm r12!, {r0, r1, r2, r3}
+    movs r0, #1
+    mov r1, #0
+    mov r2, #0
+    mov r3, #0
+    mov r10, #0
+    mov r11, #0
+    mov lr, #0
+    stm r12!, {r0, r1, r2, r3, r10, r11, lr}
+    movs r0, #0
+    stm r12!, {r0, r1, r2, r3, r10, r11, lr}
+    stm r12!, {r0, r1, r2, r3, r10, r11, lr}
+    mov r0, #0x80000000
+    stm r12!, {r0, r1, r2, r3, r10, r11, lr}
+    movs r0, #0
+    stm r12!, {r0, r1, r2, r3, r10, r11, lr}
+    stm r12!, {r0, r1, r2}
+    mov r0, sp
+    mov r1, r8
+    bl keccakf1600_asm
+    ldm sp, {r0, r1, r2, r3}
+    stm r4, {r0, r1, r2, r3}
+    adds r6, #1
+    subs r7, #1
+    bne 1b
+    add sp, sp, #204
+    pop {r4-r11, pc}
+    .size keccak256_chain16_asm, . - keccak256_chain16_asm

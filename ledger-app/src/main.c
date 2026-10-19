@@ -11,7 +11,8 @@
 //   03 SIGN     data: 32-byte message -> compressions || randomizer trials || 3 counters;
 //               the 4924-byte signature is kept in RAM
 //   04 GET_SIG  P1 = chunk i -> signature bytes [240 i, 240 i + 240)
-//   05 BENCH    data: count (u32) -> runs count compressions (Keccak: permutations), timed by the host
+//   05 BENCH    data: count (u32), timed by the host; P2 = 0: count compressions (Keccak:
+//               permutations); 1: count one-block Th of 48 bytes; 2: a WOTS chain of count steps
 //   06 NOP      (USB round-trip baseline)
 //   07 BENCH_OS data: count (u32) -> the OS's (cx) Keccak-256, count times over 64 bytes whose first
 //               byte is the previous digest's (first input all zero) -> the last digest
@@ -204,6 +205,23 @@ static void handle(const command_t *cmd) {
             }
             uint32_t count = read_be32(cmd->data);
             uint32_t h[50] = {0}, m[16] = {0};
+            if (cmd->p2 == 1) {
+                for (uint32_t i = 0; i < count; i++) {
+                    m[1] = i;
+                    m[8] = h[0];
+                    m[9] = h[1];
+                    m[10] = h[2];
+                    m[11] = h[3];
+                    th_oneblock(h, m, 48);
+                }
+                io_send_response_pointer((const uint8_t *) h, 16, SW_OK);
+                return;
+            }
+            if (cmd->p2 == 2) {
+                th_chain(h, m, 0, count);
+                io_send_response_pointer((const uint8_t *) h, 16, SW_OK);
+                return;
+            }
             for (uint32_t i = 0; i < count; i++) {
                 if (hash == HASH_SHA256) {
                     sha256_compress(h, m);

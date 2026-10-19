@@ -25,6 +25,23 @@ void th_oneblock(uint32_t out[4], const uint32_t block[16], uint32_t len) {
     }
 }
 
+void th_chain(uint32_t v[4], uint32_t block[16], uint32_t p, uint32_t steps) {
+    if (g_hash == HASH_KECCAK256) {
+        g_compressions += steps;
+        keccak256_chain16(v, block, p, steps);
+        return;
+    }
+    // Word copies: the SDK's memcpy goes byte by byte.
+    for (; steps > 0; steps--, p++) {
+        block[1] = p;
+        block[8] = v[0];
+        block[9] = v[1];
+        block[10] = v[2];
+        block[11] = v[3];
+        th_oneblock(v, block, 48);
+    }
+}
+
 void h_init(hctx_t *c) {
     c->buf_words = 0;
     c->t = 0;

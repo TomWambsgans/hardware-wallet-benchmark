@@ -23,5 +23,9 @@ void keccak_squeeze(uint32_t *out, const uint32_t s[50], uint32_t n_words);
 // First 16 bytes of Keccak-256(block[0..len)), len <= 64, block zero-padded.
 void keccak256_oneblock16(uint32_t out[4], const uint32_t block[16], uint32_t len);
 
+// A WOTS chain of Keccak-256 Th steps (hash.h, th_chain): v = Keccak-256(block)[0..16)
+// `steps` times, block word 1 = p, p + 1, ..., words 8..11 = v, 48 bytes.
+void keccak256_chain16(uint32_t v[4], const uint32_t block[16], uint32_t p, uint32_t steps);
+
 // Copies the assembly's round constants to RAM (loads from flash are slower). Device only; a no-op elsewhere.
 void keccak_setup(void);

@@ -6,6 +6,7 @@
 For each hash:
   1. compression throughput (BENCH, minus the USB round trip of a no-op APDU); for Keccak-256
      a compression is a Keccak-f[1600] permutation, and the OS's own Keccak-256 is timed too;
+     then the same per hash for 48-byte one-block Th calls and for a long WOTS chain;
   2. keygen on the seed of vectors/<hash>.json, public key checked against it;
   3. the vector messages signed, signatures compared byte for byte;
   4. --sigs random messages signed, each verified with the Python reference.
@@ -47,13 +48,14 @@ class App:
         self.version = version
         self.rtt = statistics.median(self.timed(INS_NOP)[1] for _ in range(50))
 
-    def timed(self, ins: int, p1: int = 0, data: bytes = b""):
+    def timed(self, ins: int, p1: int = 0, data: bytes = b"", p2: int = 0):
         t0 = time.perf_counter()
-        out = self.dev.apdu(CLA, ins, p1, 0, data, timeout_s=600)
+        out = self.dev.apdu(CLA, ins, p1, p2, data, timeout_s=600)
         return out, time.perf_counter() - t0
 
-    def compression_us(self, hash_id: int, count: int = 4000) -> float:
-        _, dt = self.timed(INS_BENCH, hash_id, count.to_bytes(4, "big"))
+    def compression_us(self, hash_id: int, count: int = 4000, mode: int = 0) -> float:
+        """mode 0: compressions; 1: one-block Th calls; 2: steps of one WOTS chain."""
+        out, dt = self.timed(INS_BENCH, hash_id, count.to_bytes(4, "big"), mode)
         return (dt - self.rtt) / count * 1e6
 
     def os_keccak256_us(self, count: int = 1000) -> float:
@@ -80,8 +82,12 @@ def run(app: App, hash_name: str, n_random: int) -> dict:
     hid = HASHES[hash_name]
     ref = sphincs_ref.Sphincs(hash_name)
     vectors = sphincs_ref.load_vectors(hash_name)
-    r = {"compression_us": app.compression_us(hid, 1000 if hash_name == "keccak256" else 4000)}
+    count = 1000 if hash_name == "keccak256" else 4000
+    r = {"compression_us": app.compression_us(hid, count)}
     print(f"{hash_name}: {r['compression_us']:.1f} us per compression ({1e6 / r['compression_us']:,.0f}/s)")
+    r["oneblock_th_us"] = app.compression_us(hid, count, 1)
+    r["chain_step_us"] = app.compression_us(hid, count, 2)
+    print(f"  {r['oneblock_th_us']:.1f} us per one-block Th, {r['chain_step_us']:.1f} us per WOTS chain step")
     if hash_name == "keccak256":
         r["os_keccak256_us"] = app.os_keccak256_us()
         print(f"  the OS's Keccak-256 (cx): {r['os_keccak256_us']:.1f} us per 64-byte hash")

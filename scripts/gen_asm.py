@@ -666,11 +666,69 @@ def gen_keccak_oneblock() -> list[str]:
     return out
 
 
+def gen_keccak_chain() -> list[str]:
+    """keccak256_chain16_asm(val, head, p, steps, rc): a WOTS chain, steps >= 1. val is
+    the chain value as lanes 4-5 of the input (4 interleaved words), updated in place;
+    head[0] is the unzipped block word 0, head[2..7] lanes 1-3. Each step: lane 0 from
+    head[0] and the unzipped p, lanes 1-3 and the value copied, the padding of a 48-byte
+    input and zeros stored with stm, the permutation, lanes 0-1 out as the next value."""
+    name = "keccak256_chain16_asm"
+    out = function(name)
+    e = out.append
+    Z = "r0, r1, r2, r3, r10, r11, lr"  # stm of 7 words; r0 carries the nonzero ones
+    # Frame: the state at 0. 36 + 204 keeps sp 8-aligned; rc (5th argument) at 240.
+    e("    push {r4-r11, lr}")
+    e("    sub sp, sp, #204")
+    e("    mov r4, r0")                  # val
+    e("    mov r5, r1")                  # head
+    e("    mov r6, r2")                  # p
+    e("    mov r7, r3")                  # steps
+    e("    ldr r8, [sp, #240]")          # rc
+    e("1:")
+    e("    mov r0, r6")
+    out += zip_steps("r0", "r1", KECCAK_ZIP_STEPS)
+    e("    ldr r2, [r5]")
+    e("    lsr r3, r2, #16")
+    e("    bfi r2, r0, #16, #16")        # lane 0, even bits: block word 0's, then p's
+    e("    bfi r0, r3, #0, #16")         # odd bits
+    e("    strd r2, r0, [sp]")
+    e("    add r12, r5, #8")
+    e("    ldm r12, {r0, r1, r2, r3, r10, r11}")
+    e("    add r12, sp, #8")
+    e("    stm r12!, {r0, r1, r2, r3, r10, r11}")  # words 2-7: lanes 1-3
+    e("    ldm r4, {r0, r1, r2, r3}")
+    e("    stm r12!, {r0, r1, r2, r3}")            # words 8-11: the value
+    e("    movs r0, #1")                            # word 12: padding byte 48
+    for r in ("r1", "r2", "r3", "r10", "r11", "lr"):
+        e(f"    mov {r}, #0")
+    e(f"    stm r12!, {{{Z}}}")                     # words 12-18
+    e("    movs r0, #0")
+    e(f"    stm r12!, {{{Z}}}")                     # 19-25
+    e(f"    stm r12!, {{{Z}}}")                     # 26-32
+    e("    mov r0, #0x80000000")                    # word 33: padding byte 135
+    e(f"    stm r12!, {{{Z}}}")                     # 33-39
+    e("    movs r0, #0")
+    e(f"    stm r12!, {{{Z}}}")                     # 40-46
+    e("    stm r12!, {r0, r1, r2}")                 # 47-49
+    e("    mov r0, sp")
+    e("    mov r1, r8")
+    e("    bl keccakf1600_asm")
+    e("    ldm sp, {r0, r1, r2, r3}")
+    e("    stm r4, {r0, r1, r2, r3}")
+    e("    adds r6, #1")
+    e("    subs r7, #1")
+    e("    bne 1b")
+    e("    add sp, sp, #204")
+    e("    pop {r4-r11, pc}")
+    e(f"    .size {name}, . - {name}")
+    return out
+
+
 def keccak_file() -> str:
     out = [HEADER, "    .global keccak_rc", "    .p2align 2", "keccak_rc:"]
     for rc in keccak_rc64():
         out.append("    .word {:#010x}, {:#010x}".format(*interleave(rc)))
-    return "\n".join(out + [""] + gen_keccakf() + [""] + gen_keccak_oneblock()) + "\n"
+    return "\n".join(out + [""] + gen_keccakf() + [""] + gen_keccak_oneblock() + [""] + gen_keccak_chain()) + "\n"
 
 
 if __name__ == "__main__":

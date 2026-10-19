@@ -21,6 +21,10 @@ void hash_setup(void);
 // Th's one-block case: H(block[0..len))[0..16), len <= 64, block zero-padded.
 void th_oneblock(uint32_t out[4], const uint32_t block[16], uint32_t len);
 
+// A WOTS chain: `steps` times, v = Th of the 48-byte block with word 1 = p, p + 1, ...
+// and words 8..11 = v (block words 12..15 zero). Keccak keeps v interleaved throughout.
+void th_chain(uint32_t v[4], uint32_t block[16], uint32_t p, uint32_t steps);
+
 // H over longer inputs (WOTS leaves, FORS roots, message digest), streamed.
 typedef struct {
     uint32_t h[50];   // chaining value; Keccak: the sponge state

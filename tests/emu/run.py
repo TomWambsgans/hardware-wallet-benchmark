@@ -218,10 +218,44 @@ def main():
         emu.call("keccak_permute", BUF_S)
         emu.call("keccak_squeeze", BUF_H, BUF_S, 8)
         assert emu.get(BUF_H, 32) == keccak256(data), n_words
-    print("all 6 assembly functions match the reference on 300 random inputs and honour the calling convention;")
-    print("the Keccak-256 sponge matches over 0 to 400 bytes")
+    # The fused WOTS chain (C around the assembly permutation).
+    for steps in range(9):
+        head = bytearray(os.urandom(64))
+        head[48:] = bytes(16)
+        v = os.urandom(16)
+        p = int.from_bytes(os.urandom(2), "little")
+        emu.put(BUF_M, bytes(head))
+        emu.put(BUF_H, v)
+        n = emu.call("keccak256_chain16", BUF_H, BUF_M, p, steps)
+        if steps in (1, 7):
+            counts[f"keccak256_chain16, {steps} step{'s' * (steps > 1)}"] = n
+        for k in range(steps):
+            head[4:8] = (p + k).to_bytes(4, "little")
+            head[32:48] = v
+            v = keccak256(bytes(head[:48]))[:16]
+        assert emu.get(BUF_H, 16) == v, steps
+    # Its assembly directly (5th argument on the stack): lanes in, lanes out.
+    for steps in (1, 3, 7):
+        head = os.urandom(32) + bytes(32)
+        v = os.urandom(16)
+        p = int.from_bytes(os.urandom(2), "little")
+        lanes = struct.unpack("<4Q", head[:32])
+        hw = [w for lane in lanes for w in interleave(lane)]
+        hw[0] = interleave(int.from_bytes(head[:4], "little"))[0] | interleave(int.from_bytes(head[:4], "little"))[1] << 16
+        emu.put(BUF_IN, struct.pack("<8I", *hw))
+        emu.put(BUF_H, struct.pack("<4I", *(w for lane in struct.unpack("<2Q", v) for w in interleave(lane))))
+        counts["keccak256_chain16_asm"] = emu.call("keccak256_chain16_asm", BUF_H, BUF_IN, p, steps, rc)
+        blk = bytearray(head[:48])
+        for k in range(steps):
+            blk[4:8] = (p + k).to_bytes(4, "little")
+            blk[32:48] = v
+            v = keccak256(bytes(blk))[:16]
+        expect = [w for lane in struct.unpack("<2Q", v) for w in interleave(lane)]
+        assert list(struct.unpack("<4I", emu.get(BUF_H, 16))) == expect, steps
+    print("all 7 assembly functions match the reference on 300 random inputs and honour the calling convention;")
+    print("the Keccak-256 sponge matches over 0 to 400 bytes; the fused chain matches for 0 to 8 steps")
     for name, c in counts.items():
-        print(f"  {name:22s} {c:5d} instructions")
+        print(f"  {name:30s} {c:6d} instructions")
 
 
 if __name__ == "__main__":
