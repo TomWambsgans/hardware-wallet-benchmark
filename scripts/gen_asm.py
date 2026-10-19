@@ -1,11 +1,12 @@
-"""Generate the device's Thumb-2 compression functions (ARMv8-M mainline, Cortex-M35P).
+"""Generate the device's Thumb-2 compression functions and Keccak-f[1600] (ARMv8-M
+mainline, Cortex-M35P).
 
-    python3 scripts/gen_asm.py   # writes ledger-app/src/crypto/{blake2s,sha256}_thumb2.S
+    python3 scripts/gen_asm.py   # writes ledger-app/src/crypto/{blake2s,sha256,keccak}_thumb2.S
 
 What the Nano S Plus core rewards (measured with timing probes on the device):
   - 1 cycle per ALU op, rotate-immediate, load and store -- but only for code that stays
     in the ~2 KB instruction cache; straight-line code beyond that is fetch-bound at
-    ~0.6 cycle per byte. So both functions are small loops, not unrolled.
+    ~0.6 cycle per byte. So all functions are small loops, not unrolled.
   - 2 cycles for an operand with a rotate/shift (`eor r0, r1, r2, ror #7`): rotations
     are explicit `ror` instructions instead.
   - +1 cycle when a load is used by the next instruction: loads are issued early.
@@ -32,6 +33,19 @@ SHA-256 (sha256_thumb2.S):
   block is 64 bytes (read big-endian, `rev`); k = sha256_k, the 64 constants and a 0
   sentinel that ends the round loop. A schedule loop (two words an iteration) then a round
   loop (8 rounds an iteration, a..h renamed, Maj reusing the previous round's a ^ b).
+
+Keccak-f[1600] (keccak_thumb2.S):
+  void keccakf1600_asm(uint32_t s[50], const uint32_t rc[48])
+  void keccak256_oneblock16_asm(uint32_t out[4], const uint32_t block[16], uint32_t len,
+                                const uint32_t rc[48])   -- Keccak-256(block[:len])[:16]
+  void keccak256_chain16_asm(uint32_t val[4], const uint32_t head[8], uint32_t p,
+                             uint32_t steps, const uint32_t rc[48])   -- a WOTS chain
+  The state is bit-interleaved (a lane as its even bits, then its odd bits), so 64-bit
+  rotations are 32-bit ones; rc = keccak_rc, the interleaved round constants. A loop of
+  one round, from s to a second state on the stack and back (24 rounds end in s): theta's
+  column parities (ldm and loads), its D words (6 kept in r8-r12/lr, the rest in a stack
+  table), then per row half: 5 words loaded, XORed with D, rotated, chi'd in r2-r7 and
+  stored. Row order and D reloads come from an exhaustive search (7 reloads a round).
 """
 
 import pathlib
@@ -538,10 +552,9 @@ def gen_keccakf() -> list[str]:
             e(alu("eor", d, ra, rb))
         if item in tabled:
             e(f"    str {d}, [sp, #{DT + 4 * item}]")
+    # Rows: 5 B words and a chi temporary in the 6 registers that hold no D, r2-r7.
     assert sorted(free) == sorted(f"r{i}" for i in range(2, 8))
-    # Rows: 5 B words and a chi temporary in the 6 registers that hold no D.
-    free.sort(key=lambda r: (r not in LOW, int(r[1:]) if r != "lr" else 14))
-    B, T = free[:5], free[5]
+    B, T = ["r2", "r3", "r4", "r5", "r6"], "r7"
 
     ops, k = [], 0
     for Y, h in KECCAK_ROW_ORDER:

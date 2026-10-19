@@ -1,7 +1,7 @@
 # SPHINCS+ on a Trezor Safe 3
 
 The same scheme and code as the Ledger app (`ledger-app/src/crypto`: the C scheme and the
-Thumb-2 BLAKE2s and SHA-256 compressions), run on a Trezor Safe 3 (T3B1: STM32U585,
+Thumb-2 BLAKE2s and SHA-256 compressions and Keccak-f[1600]), run on a Trezor Safe 3 (T3B1: STM32U585,
 Cortex-M33 at 160 MHz) as three commands added to Trezor's production-test firmware
 (prodtest, C, a text command line over USB serial):
 

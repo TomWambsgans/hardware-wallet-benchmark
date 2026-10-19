@@ -2,7 +2,7 @@
 
 // leanVM's SPHINCS+ variant: WOTS+C and FORS+C, 2^24 signatures per key.
 // Spec: leanVM doc/sphincs/main.tex; reference: leanVM crates/sphincs.
-//   Th(P, tw, M) = H(tw || P || M)[..16], H = BLAKE2s-256 or raw SHA-256 (hash.h, g_hash)
+//   Th(P, tw, M) = H(tw || P || M)[..16], H = BLAKE2s-256, raw SHA-256 or Keccak-256 (hash.h, g_hash)
 //   WOTS+C: w = 3 (chains of 8), v = 42 chains, target sum T = 191
 //   hypertree: d = 3 layers numbered from the top, heights (12, 7, 7)
 //   FORS+C: a = 10, k = 15 digest indices, k - 1 = 14 trees

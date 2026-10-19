@@ -1,5 +1,6 @@
-"""Run the device's Thumb-2 compression functions under Unicorn (ARMv8-M): check each one
-against a Python reference and the calling convention, and count its instructions.
+"""Run the device's Thumb-2 compression functions and Keccak-f[1600] under Unicorn (ARMv8-M):
+check each one against a Python reference and the calling convention, and count its
+instructions.
 
     tests/emu/build.sh && .venv/bin/python tests/emu/run.py
 """
