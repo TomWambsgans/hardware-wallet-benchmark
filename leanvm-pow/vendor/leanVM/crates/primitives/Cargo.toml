@@ -1,0 +1,28 @@
+[package]
+name = "primitives"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+parallel.workspace = true
+rand = { workspace = true, optional = true }
+serde.workspace = true
+
+[features]
+# Test-only helpers (`test_rng`) used by this and other crates' tests.
+# Kept off the default build so `rand` stays out of the production graph.
+test-util = ["dep:rand"]
+
+[dev-dependencies]
+primitives = { path = ".", features = ["test-util"] }
+bincode.workspace = true
+bench.workspace = true
+sha3.workspace = true
+
+[[bench]]
+name = "hash_throughput"
+harness = false
