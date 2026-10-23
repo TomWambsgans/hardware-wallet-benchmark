@@ -16,3 +16,6 @@ __pycache__/
 
 # Trezor firmware source, fetched by trezor/build.sh
 trezor/trezor-firmware/
+
+# leanvm-pow (Rust)
+leanvm-pow/target/
