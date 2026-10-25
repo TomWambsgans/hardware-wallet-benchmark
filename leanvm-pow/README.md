@@ -19,16 +19,15 @@ cargo test --release                                         # false claims and 
 
 ## Results
 
-`D = 18` (5,404,594 cycles, 2^27.52 committed, bytecode 2,048 instructions):
+`D = 18` (5,404,594 cycles, 2^27.52 committed, bytecode 2,048 instructions), on an AMD Ryzen 7 PRO
+8700GE (8 cores / 16 threads, AVX-512, shared with other jobs):
 
-| rate | proof size | proving time | peak memory | verifying | machine |
-|---|---|---|---|---|---|
-| 1/4 | **267.2 KiB** | 10.9 s | 19.0 GiB | 57.4 ms | Ryzen 7 PRO 8700GE, 8 cores / 16 threads, AVX-512, shared with other jobs |
-| 1/2 | 365.6 KiB | 29.8 s | 18.9 GiB | 30.5 ms | `h2`, 8 vCPU EPYC-Milan, AVX2, shared with other jobs |
+| rate | proof size | proving time | peak memory | verifying |
+|---|---|---|---|---|
+| 1/4 | **267.2 KiB** | 6.6 s | 19.0 GiB | 12.9 ms |
+| 1/2 | 365.6 KiB | 6.2 s | 19.0 GiB | 14.4 ms |
 
-The two times come from different (and busy) machines, so they do not compare rates. Full
-outputs: [`results/`](results). Rate 1/2, on `h2` (AMD EPYC-Milan, 8 vCPU, AVX2, no AVX-512, shared with other jobs
-during the run, so the time is pessimistic):
+Full outputs: [`results/`](results).
 
 ```
 smallest i with keccak256(abi.encode(uint256(i))) starting with 18 zero bits
@@ -38,10 +37,10 @@ smallest i with keccak256(abi.encode(uint256(i))) starting with 18 zero bits
   bytecode                    : 2,048 instructions
   cycles (VM steps)           : 5,404,594
     details                   : MUL 2^20.89 (36.0%)  DEREF 2^20.678 (31.0%)  XOR 2^20.033 (19.9%)  SET 2^18.474 (6.7%)  KECCAK 2^17.563 (3.6%)  JUMP 2^17.226 (2.8%)  MEMORY 2^23.134  BYTECODE 2^10.077  TOTAL_COMMITTED 2^27.524
-  rate                        : 1/2
-  proof size                  : 365.6 KiB
-  proving time                : 29.843 s      peak memory 18.92 GiB
-  verifying                   : 30.532 ms
+  rate                        : 1/4
+  proof size                  : 267.2 KiB
+  proving time                : 6.623 s      peak memory 18.959 GiB
+  verifying                   : 12.918 ms
 ```
 
 `D = 16` (`i = 43,786`): 1.44M cycles, 2^25.6 committed, 330 KiB, 12.2 s, 4.8 GiB.

@@ -217,8 +217,8 @@ impl Program {
     /// `(pc, fp) = (0, 0)` with no allocation hints. Suitable for straight-line
     /// programs that never change the frame pointer and touch only the first
     /// `main_frame` memory cells (so the prover needs no nondeterministic frame
-    /// allocation). `prog.len()` must be a power of two with a never-executed
-    /// sentinel in its last slot: the run halts on reaching `g^{len-1}` (§sec:state).
+    /// allocation). `prog.len()` must be a power of two: the run halts on reaching
+    /// the final state `(g^{len-1}, g^0)`, the last slot in main's frame (§sec:state).
     #[cfg(test)]
     pub fn from_bytecode(prog: Vec<Op>, main_frame: u32) -> Self {
         Self::assemble(prog, HashMap::new(), main_frame)
@@ -880,6 +880,46 @@ mod tests {
             .err()
             .expect("the run must fail");
         assert!(matches!(err.fault, Fault::NotCanonical { cell: 0, .. }), "{err}");
+    }
+
+    /// The last slot in a frame other than main's is an ordinary slot: the machine halts in the
+    /// final STATE, so this program reaches the last slot at `fp = g`, executes the JUMP there,
+    /// and halts on landing back in main's frame. Its five rows are exactly the walk the state
+    /// bus balances (§sec:state), so the verifier accepts the run the prover proves.
+    #[test]
+    fn halts_in_the_final_state() {
+        let pi = [w(7), w(11)];
+        let (last_pc, other_fp) = (F192::from(g_pow(7)), F192::from(g_pow(1)));
+        let fill = Op::Xor { a: 0, b: 0, c: 0 };
+        // The last slot is reached at `fp = g`, which is not main's, so it runs like any other.
+        let program = |last| {
+            let code = vec![
+                Op::Set { o: 2, k: F192::ONE },   // the jump condition, and main's fp
+                Op::Set { o: 3, k: last_pc },     // the last slot's pc
+                Op::Set { o: 4, k: other_fp },    // a frame pointer other than main's
+                Op::Jump { oc: 2, od: 3, of: 4 }, // -> (g^7, g)
+                fill,
+                fill,
+                fill,
+                last, // at fp = g it reads cells 2, 3, 2, so -> (g^7, g^0): the final state
+            ];
+            Program::from_bytecode(code, 8)
+        };
+
+        let jumping = program(Op::Jump { oc: 1, od: 2, of: 1 });
+        let exec = jumping.execute(pi).expect("the run halts in the final state");
+        assert_eq!(exec.cycles, 5, "three SETs and both JUMPs, the last slot's included");
+        assert_eq!(exec.rows(), [0, 0, 3, 0, 2, 0], "XOR, MUL, SET, DEREF, JUMP, KECCAK");
+        let (proof, _) = prove(&jumping, pi, crate::pcs::TEST_LOG_INV_RATE).unwrap();
+        verify(&jumping, &pi, &proof).expect("the verifier accepts the run");
+
+        // With the compiler's SET in the last slot the run has nowhere to go from there, its
+        // successor g^8 being no bytecode address.
+        let err = program(Op::Set { o: 5, k: F192::ONE })
+            .execute(pi)
+            .err()
+            .expect("the run must fail");
+        assert!(matches!(err.fault, Fault::HaltOutsideMain { fp: 1 }), "{err}");
     }
 
     /// A 192-bit-word MUL: the E-product of two full machine words. Full-limb

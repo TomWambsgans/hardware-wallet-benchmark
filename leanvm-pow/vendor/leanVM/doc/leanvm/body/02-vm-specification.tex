@@ -33,7 +33,7 @@ The Virtual Machine execution loop is the following:
       \item assert the memory constraints (e.g. $\loc{o_C}=\loc{o_A}+\loc{o_B}$ for XOR)
       \item update $\pc$ and $\fp$ (all instructions except \texttt{JUMP} set $\pc \xleftarrow{} \pc \cdot \gen$, advancing to the next instruction, and leave $\fp \xleftarrow{} \fp$ unchanged)
     \end{itemize}
-  \item if $\pc$ equals $\pc_{\textsf{final}} := \gen^{\nprog - 1}$, exit the loop (successful execution). Otherwise go back to $1.$
+  \item if $(\pc,\fp)$ equals the final state $(\pc_{\textsf{final}},\fp_{\textsf{final}}) := (\gen^{\nprog - 1},\gen^{0})$, exit the loop (successful execution). Otherwise go back to $1.$
 \end{enumerate}
 
 \paragraph{Write-once memory}

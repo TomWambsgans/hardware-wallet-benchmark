@@ -140,7 +140,7 @@ pub fn compile(ast: &Ast) -> Program {
     }
     // The padded bytecode size `B` is fixed by the lowered length, so the halt
     // sentinel pc `g^{B-1}` (last slot) is known before resolving: `main`'s
-    // `EndSentinel` jump dest resolves to it, and the program halts there.
+    // `EndSentinel` jump dest resolves to it, and the program halts there in main's frame.
     let total: usize = lowered.iter().map(|l| l.code.len()).sum();
     // The sentinel needs a slot of its own PAST all real code: pad from
     // total + 1, so a program of exactly 2^k instructions doesn't collide

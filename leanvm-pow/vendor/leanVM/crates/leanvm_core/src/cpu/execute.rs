@@ -549,11 +549,16 @@ impl Program {
         }
 
         loop {
-            if pc == ending_pc {
-                if fp != 0 {
-                    return Err(ExecError::new(self, pc, Fault::HaltOutsideMain { fp }));
+            if pc >= ending_pc {
+                // The machine halts in the final STATE `(g^{B-1}, g^0)`, the one the state bus
+                // pulls as its boundary (doc/leanvm sec:state).
+                if fp == 0 && pc == ending_pc {
+                    break;
                 }
-                break;
+                if pc > ending_pc {
+                    // The last slot ran in another frame and fell through to `g^B`, no address.
+                    return Err(ExecError::new(self, ending_pc, Fault::HaltOutsideMain { fp }));
+                }
             }
             if steps >= MAX_STEPS {
                 return Err(ExecError::new(self, pc, Fault::StepLimit));
