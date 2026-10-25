@@ -1,0 +1,58 @@
+{
+ "date": "2026-10-26T03:51:57",
+ "device": "Ledger Nano S Plus",
+ "app_version": "1.0.0",
+ "stream": "d18-rate4.stream",
+ "verify_s": 15.77295854199474,
+ "receive_only_s": 12.851611666999815,
+ "compute_s": 2.9213468749949243,
+ "stream_bytes": 271664,
+ "chunks": 1066,
+ "stack_bytes": 27432,
+ "runs": [
+  {
+   "seconds": 15.787128459000087,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 27432
+  },
+  {
+   "seconds": 15.77295854199474,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 27432
+  },
+  {
+   "seconds": 15.76108904099965,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 27432
+  }
+ ],
+ "receive_runs": [
+  {
+   "seconds": 12.84859745799622,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 480
+  },
+  {
+   "seconds": 12.852711041996372,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 32
+  },
+  {
+   "seconds": 12.851611666999815,
+   "result": 0,
+   "bytes_read": 271664,
+   "chunks": 1066,
+   "stack_bytes": 0
+  }
+ ]
+}

@@ -51,7 +51,9 @@ unrolled), so the verifier's bytecode evaluation stays cheap.
 ## Verifying on a Ledger
 
 [`ledger/`](ledger/README.md) verifies the rate-1/4 proof on a Ledger Nano S Plus. It is leanVM's
-verifier ported to the device's 40 KB of RAM, with the proof streamed over USB. Two flags serve it:
+verifier ported to the device's 40 KB of RAM, with the proof streamed over USB. The device **accepts**
+it in **15.77 s**, of which 12.85 s is the 271,664-byte stream arriving over USB and **2.92 s** is the
+verification itself; it peaks at 27,432 bytes of stack. Two flags serve it:
 
 ```bash
 cargo run --release -- --difficulty 18 --log-inv-rate 2 --ledger-stream ledger/proofs/d18-rate4.stream

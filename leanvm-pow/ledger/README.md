@@ -7,7 +7,18 @@ non-interactive verification that leanVM's own verifier performs, ported to fit 
 
 ## Results
 
-Not measured yet. Run step 3 below; it writes `results/ledger-verify.json`.
+The device accepts the proof. Three runs on a Nano S Plus (firmware 1.6.1), medians:
+
+| | |
+|---|---|
+| verify, end to end | **15.77 s** |
+| of which the stream over USB | 12.85 s (271,664 bytes in 1,066 chunks) |
+| of which verifying | **2.92 s** |
+| peak stack | 27,432 bytes (of 39,224 the linker leaves) |
+
+Streaming the proof costs 4.4x what checking it does, at the ~21 KB/s the USB link carries
+(`results/usb-nanosp.json`, on `main`). The three runs agree to within 30 ms. Full output:
+[`../results/ledger-verify.json`](../results/ledger-verify.json).
 
 ## Run it
 
@@ -81,6 +92,9 @@ at the first WHIR level). Rate 1/2 proofs (225) are refused.
   rejects 300 single-bit corruptions of it. The compiled-in bytecode data is the guest's.
 - `keccak-pow --ledger-check <stream>` checks the same with 3,000 corruptions, and a changed public input.
 - `keccak-pow --ledger-stream <path>` verifies each new proof with the port before writing it.
+- `tests/emu/run_leanvm.py` runs `leanvm_clmul32`, the one hand-written routine, under Unicorn: it
+  checks the compiled bytes against a carry-less reference and against the calling convention (r4-r11
+  and `sp` preserved, the caller's frame untouched), as `tests/emu/run.py` does for PQ Bench's assembly.
 
 ## Files
 
