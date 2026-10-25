@@ -21,6 +21,8 @@ use primitives::{
 };
 use sha3::{Digest, Keccak256};
 
+mod ledger;
+
 const GUEST: &str = include_str!("../guest/pow.py");
 /// Digests per fast block (`B` in the guest).
 const BLOCK: u64 = 16;
@@ -44,6 +46,16 @@ struct Cli {
     /// Print the guest's bytecode and exit.
     #[arg(long)]
     disasm: bool,
+    /// Write the device verifier's compiled-in program data (`ledger/verifier/src/program.rs`) and exit.
+    #[arg(long, value_name = "PATH")]
+    gen_ledger: Option<String>,
+    /// After proving, verify with the device verifier (natively) and write the proof as the byte stream the
+    /// Ledger reads, the 32-byte public input first.
+    #[arg(long, value_name = "PATH")]
+    ledger_stream: Option<String>,
+    /// Check the device verifier against a stream `--ledger-stream` wrote, and single-bit corruptions of it.
+    #[arg(long, value_name = "PATH")]
+    ledger_check: Option<String>,
 }
 
 /// `keccak256(abi.encode(uint256(j)))`.
@@ -65,7 +77,9 @@ fn mask(difficulty: u32) -> u64 {
 
 fn find_smallest(difficulty: u32) -> u64 {
     let m = mask(difficulty);
-    (0..1u64 << 24).find(|&j| lane(&digest(j), 0) & m == 0).expect("no hit below 2^24")
+    (0..1u64 << 24)
+        .find(|&j| lane(&digest(j), 0) & m == 0)
+        .expect("no hit below 2^24")
 }
 
 /// The guest compiled for `difficulty`.
@@ -98,7 +112,9 @@ fn advice(i: u64) -> (Vec<Vec<F192>>, Vec<Vec<F192>>) {
     for j in 0..=i {
         let d = digest(j);
         let l0 = lane(&d, 0);
-        let mut entry: Vec<F192> = (0..4).map(|c| gpow[TABLE_BASE + ((l0 >> (16 * c)) & 0xffff) as usize]).collect();
+        let mut entry: Vec<F192> = (0..4)
+            .map(|c| gpow[TABLE_BASE + ((l0 >> (16 * c)) & 0xffff) as usize])
+            .collect();
         entry.push(F192::new(lane(&d, 1), 0, 0));
         w.push(entry);
         if j % BLOCK == 0 && j / BLOCK < full_blocks {
@@ -117,6 +133,22 @@ fn main() {
         println!("{}", lean_compiler::disassemble(&program.prog));
         return;
     }
+    if let Some(path) = &cli.ledger_check {
+        let recorded = std::fs::read(path).expect("reads the stream");
+        match ledger::tamper_check(&recorded, 3000) {
+            Ok(rejected) => println!(
+                "device verifier: accepts the stream, rejects all {rejected} corruptions and a changed public input"
+            ),
+            Err(why) => panic!("device verifier {why}"),
+        }
+        return;
+    }
+    if let Some(path) = &cli.gen_ledger {
+        let description = format!("pow/guest/pow.py at difficulty {}", cli.difficulty);
+        std::fs::write(path, ledger::program_data(&program, &description)).expect("writes the program data");
+        println!("wrote {path}");
+        return;
+    }
     let i = find_smallest(cli.difficulty);
     let d = digest(i);
     println!(
@@ -124,7 +156,10 @@ fn main() {
         cli.difficulty
     );
     println!("  i                           : {}", pretty_integer(i as usize));
-    println!("  keccak256                   : 0x{}", d.iter().map(|b| format!("{b:02x}")).collect::<String>());
+    println!(
+        "  keccak256                   : 0x{}",
+        d.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    );
     let (w, slow) = advice(i);
     program.set_witness("w", w);
     program.set_witness("slow", slow);
@@ -138,7 +173,10 @@ fn main() {
     let (_, verify_time) = Plan::new(cli.repeat, 0).measure_quiet(|_| verify(&program, &pi, &proof).unwrap());
 
     println!("  hashes proven               : {}", pretty_integer(i as usize + 1));
-    println!("  bytecode                    : {} instructions", pretty_integer(program.prog.len()));
+    println!(
+        "  bytecode                    : {} instructions",
+        pretty_integer(program.prog.len())
+    );
     println!("  cycles (VM steps)           : {}", pretty_integer(stats.cycles));
     println!("    details                   : {}", stats.details());
     let bytes = bincode::serialized_size(&proof).expect("proof is serializable");
@@ -150,7 +188,22 @@ fn main() {
         prove_time.spread(),
         pretty_f64(bench::peak_rss_bytes() as f64 / (1u64 << 30) as f64)
     );
-    println!("  verifying                   : {} ms", pretty_f64(verify_time.mean() * 1000.0));
+    println!(
+        "  verifying                   : {} ms",
+        pretty_f64(verify_time.mean() * 1000.0)
+    );
+    if let Some(path) = &cli.ledger_stream {
+        let start = std::time::Instant::now();
+        let stream = ledger::device_stream(&proof, &pi).expect("the device verifier accepts the proof");
+        println!(
+            "  device verifier (native)    : accepts, {} ms; stream {} bytes",
+            pretty_f64(start.elapsed().as_secs_f64() * 500.0),
+            pretty_integer(stream.len())
+        );
+        let mut out = leanvm_core::cpu::public_input_bytes(&pi).to_vec();
+        out.extend(stream);
+        std::fs::write(path, out).expect("writes the stream");
+    }
 }
 
 #[cfg(test)]
@@ -219,5 +272,24 @@ mod tests {
         assert!(!blocks.is_empty(), "difficulty 18 has such blocks below i");
         assert!(run_at(d, i, |_, _| {}));
         assert!(!run_at(d, i, |_, slow| slow[blocks[0]] = vec![F192::ZERO]));
+    }
+
+    /// The device verifier (ledger/verifier) accepts the proof stream the Ledger app ships with, and rejects
+    /// corruptions of it.
+    #[test]
+    fn the_device_verifier_accepts_the_shipped_stream() {
+        let recorded = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../ledger/proofs/d18-rate4.stream"
+        ))
+        .unwrap();
+        assert_eq!(ledger::tamper_check(&recorded, 300), Ok(300));
+    }
+
+    /// The program data the device verifier compiles in is the guest's at difficulty 18.
+    #[test]
+    fn the_device_program_data_is_the_guest() {
+        let generated = ledger::program_data(&guest(18), "pow/guest/pow.py at difficulty 18");
+        assert_eq!(generated, include_str!("../../ledger/verifier/src/program.rs"));
     }
 }

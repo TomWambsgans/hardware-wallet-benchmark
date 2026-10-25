@@ -19,3 +19,8 @@ trezor/trezor-firmware/
 
 # leanvm-pow (Rust)
 leanvm-pow/target/
+leanvm-pow/ledger/ffi/target/
+leanvm-pow/ledger/app/build/
+leanvm-pow/ledger/app/bin/
+leanvm-pow/ledger/app/debug/
+leanvm-pow/ledger/app/glyphs/

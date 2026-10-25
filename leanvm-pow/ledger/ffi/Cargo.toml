@@ -1,0 +1,18 @@
+[package]
+name = "leanvm-ledger-ffi"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The device verifier as a C library for the Ledger app"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+leanvm-ledger-verifier = { path = "../verifier", features = ["device"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = true

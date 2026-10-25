@@ -250,6 +250,7 @@ dependencies = [
  "bincode",
  "clap",
  "lean_compiler",
+ "leanvm-ledger-verifier",
  "leanvm_core",
  "primitives",
  "sha3",
@@ -280,6 +281,10 @@ dependencies = [
  "leanvm_core",
  "primitives",
 ]
+
+[[package]]
+name = "leanvm-ledger-verifier"
+version = "0.1.0"
 
 [[package]]
 name = "leanvm_core"

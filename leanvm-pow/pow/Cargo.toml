@@ -17,3 +17,4 @@ bincode = "1"
 clap = { version = "4", features = ["derive"] }
 sha3 = "0.11"
 tracing = "0.1.26"
+leanvm-ledger-verifier = { path = "../ledger/verifier" }
