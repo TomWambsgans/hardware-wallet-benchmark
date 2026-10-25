@@ -16,7 +16,7 @@ Then $\mathcal R$ splits into rows $r_1,\dots,r_L$ with
 \[
   \bpull(r_1)=(\pc_{\mathrm{initial}},\fp_{\mathrm{initial}}),\qquad \bpush(r_i)=\bpull(r_{i+1}),\qquad \bpush(r_L)=(\pc_{\mathrm{final}},\fp_{\mathrm{final}}),
 \]
-and rows forming closed walks.
+$\bpush(r_i)\neq(\pc_{\mathrm{final}},\fp_{\mathrm{final}})$ for $i<L$, and rows forming closed walks.
 \end{proposition}
 
 \begin{proof}
@@ -24,7 +24,7 @@ Build the directed multigraph $G$ on the states: one edge $\bpull(r)\to \bpush(r
 
 Fix a state $x$. Its in-degree in $G$ counts the rows with $\bpush(r)=x$, plus $e$ if $x=(\pc_{\mathrm{initial}},\fp_{\mathrm{initial}})$. Its out-degree counts the rows with $\bpull(r)=x$, plus $e$ if $x=(\pc_{\mathrm{final}},\fp_{\mathrm{final}})$. Those two counts are the multiplicities of $x$ on the two sides of the hypothesis, so they are equal: $G$ is balanced at every state.
 
-A finite balanced multigraph is a union of edge-disjoint closed walks: follow unused edges from any vertex, which balance always permits on entering one, until a vertex repeats; remove the closed walk found and repeat. Deleting $e$ from the closed walk that contains it leaves $r_1,\dots,r_L$.
+A finite balanced multigraph is a union of edge-disjoint closed walks: follow unused edges from any vertex, which balance always permits on entering one, until a vertex repeats; remove the closed walk found and repeat. Deleting $e$ from the closed walk that contains it leaves $r_1,\dots,r_L$, cut at its first visit of the final state (what follows that visit is a closed walk of its own).
 \end{proof}
 
 \subsection{The lookup protocol}\label{sec:lookup}

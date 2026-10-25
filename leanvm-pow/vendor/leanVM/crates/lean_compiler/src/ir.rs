@@ -15,7 +15,9 @@ pub(crate) enum KVal {
     Const(F192),
     Entry(String),
     /// The halt sentinel pc `g^{B-1}` (last bytecode slot), fixed once the
-    /// padded bytecode size `B` is known. `main` jumps here to terminate.
+    /// padded bytecode size `B` is known. `main` jumps here, with `fp = g^0`, to
+    /// terminate: the machine halts in the final state `(g^{B-1}, g^0)`, so the
+    /// frame pointer is half of what ends the run.
     EndSentinel,
     /// An intra-function jump target: the `i`-th instruction of the function
     /// this `SET` belongs to, resolved to `g^{entry + i}` once entry pcs are

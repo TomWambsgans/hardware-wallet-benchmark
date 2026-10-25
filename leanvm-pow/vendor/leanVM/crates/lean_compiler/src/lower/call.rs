@@ -417,7 +417,7 @@ impl FnLower<'_> {
             return;
         }
         if self.is_main {
-            return; // a `return` in main is a no-op; main halts via the trailing sentinel jump (lower_func).
+            return; // a `return` in main is a no-op; main halts in its own frame via the trailing sentinel jump (lower_func).
         }
         let ret_base = Abi::ret(self.arg_cells, 0);
         if exprs.len() != self.return_shapes.len() {

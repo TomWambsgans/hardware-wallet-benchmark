@@ -405,9 +405,10 @@ impl FnLower<'_> {
         self.const_cell(F192::ZERO)
     }
 
-    /// Terminate `main`: jump to the halt sentinel `g^{B-1}` with `fp = g^0`.
-    /// The cell holding `1` doubles as the (nonzero) jump condition and the new
-    /// frame pointer `g^0`; the dest cell holds `g^{B-1}` (doc §sec:e2e, final state).
+    /// Terminate `main`: jump to the halt sentinel `g^{B-1}` with `fp = g^0`, the
+    /// final state the machine halts in (§sec:state). The cell holding `1` doubles
+    /// as the (nonzero) jump condition and the new frame pointer `g^0`; the dest
+    /// cell holds `g^{B-1}` (doc §sec:e2e, final state).
     fn halt(&mut self) {
         let one = self.one();
         let dest = self.fresh();
@@ -1548,7 +1549,7 @@ pub(crate) fn lower_func(
         lowerer.stmt(s);
     }
     if lowerer.is_main {
-        lowerer.halt(); // main terminates at the sentinel pc, not by falling off
+        lowerer.halt(); // main terminates in the final state (sentinel pc, main's frame), not by falling off
     } else if !matches!(f.body.last().map(|s| &s.kind), Some(StmtKind::Return(_))) {
         // A function must never fall off its end into whatever code the
         // layout placed next: append the implicit bare return.
