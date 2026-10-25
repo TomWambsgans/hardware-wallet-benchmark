@@ -34,6 +34,27 @@ Key generation builds layer 0's tree (2^12 WOTS leaves, 1.43M compressions) and 
 nodes at height 6: signing then rebuilds a 64-leaf subtree instead of the whole tree. The key
 and this cache are stored in the app's flash, so signing works right after reopening the app.
 
+## Verifying a leanVM proof on the Ledger
+
+The same device also verifies a real zero-knowledge proof. [`leanvm-pow/`](leanvm-pow/README.md)
+proves, in one [leanVM](https://github.com/leanEthereum/leanVM) proof, that 193,672 is the smallest
+integer whose `keccak256(abi.encode(uint256(i)))` starts with 18 zero bits, and
+[`leanvm-pow/ledger/`](leanvm-pow/ledger/README.md) checks that proof on a Nano S Plus: leanVM's
+verifier ported to the 40 KB of RAM an app gets, with the 265 KiB proof streamed over USB as the
+verifier reads it. It is the full 128-bit non-interactive verification, not a reduced one.
+
+| | |
+|---|---|
+| verifying, on the device | **2.92 s** |
+| receiving the proof over USB | 12.85 s |
+| end to end | 15.77 s |
+| peak stack | 27,432 bytes of the 39,224 the app gets |
+
+Checking the proof costs the device less than a quarter of what receiving it does: the 21 KB/s USB
+link is the bottleneck, not the ~63 MHz Cortex-M35P. The two figures separate cleanly: the app is
+strictly serial, blocking while a chunk is in flight, so each run is also streamed with nothing
+verified, and 2.92 s is the difference. Raw data: `leanvm-pow/results/ledger-verify.json`.
+
 ## Reproduce
 
 > [!CAUTION]
@@ -165,6 +186,47 @@ with bootloader 2.1.16 and official firmware 2.12.5.
    Trezor Suite, or run `.venv/bin/trezorctl firmware update` (which downloads it). **The
    bootloader stays unlocked, and the device stays unable to prove it is genuine.**
 
+### 3. A leanVM proof on the Ledger Nano S Plus
+
+Verifies the proof in `leanvm-pow/ledger/proofs/d18-rate4.stream` on the device. The same warning as
+step 1 applies, since it is an unsigned, sideloaded app, but this one holds no key and signs
+nothing: it reads a proof and answers whether it is valid. Needs everything step 1 needs, plus
+[rustup](https://rustup.rs); the build installs the nightly that `leanvm-pow/ledger/ffi/rust-toolchain.toml`
+pins.
+
+1. Build the app (the Rust verifier as a static library, then the C app in Ledger's pinned image):
+   ```sh
+   leanvm-pow/ledger/build.sh
+   ```
+2. Check its hand-written assembly under the emulator, before it runs on a device (no device needed):
+   ```sh
+   .venv/bin/python tests/emu/run_leanvm.py
+   ```
+3. Install it and open it, accepting both prompts on the device:
+   ```sh
+   leanvm-pow/ledger/load.sh
+   ```
+4. Verify the proof three times (~2 minutes; writes `leanvm-pow/results/ledger-verify.json`):
+   ```sh
+   .venv/bin/python leanvm-pow/ledger/host/verify.py \
+       leanvm-pow/ledger/proofs/d18-rate4.stream --runs 3 \
+       --out leanvm-pow/results/ledger-verify.json
+   ```
+   Each run prints the verification time, the receive-only baseline and how deep the stack went. The
+   screen freezes while the device verifies, as in step 1. The script stops if the device rejects the
+   proof.
+5. Remove the app when you are done, and confirm on the device:
+   ```sh
+   .venv/bin/python -m ledgerblue.deleteApp --targetId 0x33100004 --appName "leanVM Verify"
+   ```
+
+To prove the statement again on a laptop instead of using the shipped proof (no device; about 7
+seconds, but 19 GiB of RAM):
+
+```sh
+cd leanvm-pow && cargo run --release -- --difficulty 18 --log-inv-rate 2
+```
+
 ## Layout
 
 | path | |
@@ -180,6 +242,8 @@ with bootloader 2.1.16 and official firmware 2.12.5.
 | `host/rates.py` | the README table, from `results/*.json` |
 | `trezor/` | the Trezor Safe 3 port: prodtest commands, build, benchmark |
 | `tests/` | native and emulator checks; `leanvm-vectors/` regenerates `vectors/blake2s.json` |
+| `leanvm-pow/` | the proof: the zkDSL guest, the prover run, leanVM vendored |
+| `leanvm-pow/ledger/` | leanVM's verifier ported to the Nano S Plus, and the app that runs it |
 
 ## Notes
 

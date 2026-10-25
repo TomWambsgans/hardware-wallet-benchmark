@@ -17,7 +17,7 @@ The device accepts the proof. Three runs on a Nano S Plus (firmware 1.6.1), medi
 | peak stack | 27,432 bytes (of 39,224 the linker leaves) |
 
 Streaming the proof costs 4.4x what checking it does, at the ~21 KB/s the USB link carries
-(`results/usb-nanosp.json`, on `main`). The three runs agree to within 30 ms. Full output:
+([`../../results/usb-nanosp.json`](../../results/usb-nanosp.json)). The three runs agree to within 30 ms. Full output:
 [`../results/ledger-verify.json`](../results/ledger-verify.json).
 
 ## Run it
