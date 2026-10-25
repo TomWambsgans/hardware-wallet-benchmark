@@ -1,0 +1,5 @@
+# The device library builds core itself (-Zbuild-std), which needs a nightly and its sources.
+[toolchain]
+channel = "nightly-2026-10-03"
+components = ["rust-src"]
+targets = ["thumbv8m.main-none-eabi"]

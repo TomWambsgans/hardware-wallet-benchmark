@@ -1,6 +1,7 @@
 [workspace]
-members = ["pow"]
-exclude = ["vendor"]
+members = ["pow", "ledger/verifier"]
+# ledger/ffi builds for the device (thumbv8m.main-none-eabi) only: see ledger/README.md.
+exclude = ["vendor", "ledger/ffi"]
 resolver = "3"
 
 [profile.release]

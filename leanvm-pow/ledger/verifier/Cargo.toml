@@ -1,0 +1,18 @@
+[package]
+name = "leanvm-ledger-verifier"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "leanVM's proof verifier, ported to run on a Ledger Nano S Plus (no_std, no allocation)"
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+# Build for the device: Keccak-f from the PQ Bench app's assembly, the device's query bound.
+device = []
+
+# As leanVM's workspace: numeric kernels index by loop variable and take many arguments.
+[lints.clippy]
+needless_range_loop = "allow"
+too_many_arguments = "allow"

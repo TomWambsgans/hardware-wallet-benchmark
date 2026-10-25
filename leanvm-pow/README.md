@@ -43,10 +43,20 @@ smallest i with keccak256(abi.encode(uint256(i))) starting with 18 zero bits
   verifying                   : 12.918 ms
 ```
 
-`D = 16` (`i = 43,786`): 1.44M cycles, 2^25.6 committed, 330 KiB, 12.2 s, 4.8 GiB.
+`D = 16` (`i = 43,786`): 1.44M cycles, 2^25.6 committed, 330 KiB at rate 1/2, 12.2 s and 4.8 GiB on an 8-vCPU EPYC-Milan shared with other jobs.
 
 The bytecode is 2,048 instructions (the lookup table is built by a loop at run time, not
 unrolled), so the verifier's bytecode evaluation stays cheap.
+
+## Verifying on a Ledger
+
+[`ledger/`](ledger/README.md) verifies the rate-1/4 proof on a Ledger Nano S Plus. It is leanVM's
+verifier ported to the device's 40 KB of RAM, with the proof streamed over USB. Two flags serve it:
+
+```bash
+cargo run --release -- --difficulty 18 --log-inv-rate 2 --ledger-stream ledger/proofs/d18-rate4.stream
+cargo run --release -- --difficulty 18 --gen-ledger ledger/verifier/src/program.rs   # the bytecode it compiles in
+```
 
 ## Why not D = 20
 
@@ -88,4 +98,4 @@ the bytecode.
 
 The VM, its zkDSL compiler and the proof system are
 [leanEthereum/leanVM](https://github.com/leanEthereum/leanVM) (MIT / Apache-2.0), vendored
-unmodified under [`vendor/leanVM`](vendor/README.md).
+unmodified under [`vendor/leanVM`](vendor/README.md). The Ledger verifier is a port of its verifier.
