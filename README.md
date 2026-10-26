@@ -55,6 +55,15 @@ link is the bottleneck, not the ~63 MHz Cortex-M35P. The two figures separate cl
 strictly serial, blocking while a chunk is in flight, so each run is also streamed with nothing
 verified, and 2.92 s is the difference. Raw data: `leanvm-pow/results/ledger-verify.json`.
 
+Neither figure is a floor. The link is latency-bound, not wire-bound: an APDU costs 4 ms plus 2 ms
+per 64-byte HID report ([`results/usb-nanosp.json`](results/usb-nanosp.json)), while the full-speed
+interrupt endpoints carry 64 bytes per 1 ms frame in each direction, so a transport that pipelined
+reports instead of paying a round trip per 255-byte chunk would reach ~58 KB/s on this hardware; the
+SE-to-MCU serial link, not USB, is the wall past that. The 2.92 s is also the price of verifying
+non-interactively: were the device to sample WHIR's challenges itself, the prover would get one shot
+and no offline grinding, and 64 bits of interactive security would roughly halve the query count
+that dominates the verifier's Merkle hashing.
+
 ## Reproduce
 
 > [!CAUTION]
