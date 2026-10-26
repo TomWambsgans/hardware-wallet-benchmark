@@ -64,6 +64,11 @@ non-interactively: were the device to sample WHIR's challenges itself, the prove
 and no offline grinding, and 64 bits of interactive security would roughly halve the query count
 that dominates the verifier's Merkle hashing.
 
+ Putting those together — an interactive proof at 64
+bits of security, a smaller proof from an optimized leanVM, and a pipelined transport, which needs
+Ledger to update the device's firmware — we expect around 3 seconds for a full verification,
+transmission of the proof included.
+
 ## Reproduce
 
 > [!CAUTION]
